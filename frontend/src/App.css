@@ -1,34 +1,65 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* App-specific styles */
+
+/* Sidebar */
+.sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 z-40;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
+/* Main content area */
+.main-content {
+    @apply ml-64 min-h-screen bg-slate-50;
+}
+
+/* Page container */
+.page-container {
+    @apply p-6 max-w-7xl mx-auto;
+}
+
+/* KPI Card */
+.kpi-card {
+    @apply bg-white rounded-lg border border-slate-200 p-6 shadow-sm;
+}
+
+/* Data structure info badge */
+.ds-badge {
+    @apply inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.ds-badge-hashmap {
+    @apply bg-blue-50 text-blue-700;
+}
+
+.ds-badge-linkedlist {
+    @apply bg-purple-50 text-purple-700;
+}
+
+.ds-badge-bst {
+    @apply bg-green-50 text-green-700;
+}
+
+.ds-badge-heap {
+    @apply bg-orange-50 text-orange-700;
+}
+
+.ds-badge-queue {
+    @apply bg-cyan-50 text-cyan-700;
+}
+
+.ds-badge-stack {
+    @apply bg-pink-50 text-pink-700;
+}
+
+.ds-badge-trie {
+    @apply bg-yellow-50 text-yellow-700;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .sidebar {
+        @apply w-full h-auto relative border-r-0 border-b;
     }
-}
-
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
-
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
+    .main-content {
+        @apply ml-0;
     }
 }

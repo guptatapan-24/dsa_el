@@ -1,8 +1,1 @@
-{"budgets":[
-  {"category":"Groceries","limit":500.00},
-  {"category":"Transport","limit":200.00},
-  {"category":"Entertainment","limit":150.00},
-  {"category":"Shopping","limit":300.00},
-  {"category":"Dining","limit":200.00},
-  {"category":"Utilities","limit":150.00}
-]}
+{"budgets":[{"category":"Groceries","limit":500},{"category":"Shopping","limit":300},{"category":"Entertainment","limit":150},{"category":"Food","limit":200},{"category":"Utilities","limit":150},{"category":"Transport","limit":200},{"category":"Dining","limit":200}]}

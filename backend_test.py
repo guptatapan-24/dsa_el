@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import time
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://budget-tracker-888.preview.emergentagent.com/api"
+BACKEND_URL = "https://finance-tracker-1641.preview.emergentagent.com/api"
 
 class FinanceTrackerTester:
     def __init__(self):

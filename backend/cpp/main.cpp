@@ -59,6 +59,16 @@ double extractDouble(const std::string& json, const std::string& key) {
     }
 }
 
+int extractInt(const std::string& json, const std::string& key) {
+    std::string val = extractValue(json, key);
+    if (val.empty()) return 0;
+    try {
+        return std::stoi(val);
+    } catch (...) {
+        return 0;
+    }
+}
+
 bool extractBool(const std::string& json, const std::string& key) {
     std::string val = extractValue(json, key);
     return val == "true";
@@ -258,6 +268,26 @@ void loadData(const std::string& dataDir) {
             }
         }
     }
+    
+    // Load undo stack (NEW - for persistence across commands)
+    std::ifstream undoFile(dataDir + "/undo_stack.json");
+    if (undoFile.is_open()) {
+        std::stringstream buffer;
+        buffer << undoFile.rdbuf();
+        std::string content = buffer.str();
+        undoFile.close();
+        
+        std::string arr = extractValue(content, "actions");
+        if (!arr.empty()) {
+            auto items = splitJsonArray(arr);
+            // Load in reverse order since we're pushing to stack
+            for (int i = items.size() - 1; i >= 0; i--) {
+                int type = extractInt(items[i], "type");
+                std::string data = extractValue(items[i], "data");
+                engine.loadUndoAction(static_cast<ActionType>(type), data);
+            }
+        }
+    }
 }
 
 // Save data to files
@@ -301,6 +331,20 @@ void saveData(const std::string& dataDir) {
         billFile << "]}";
         billFile.close();
     }
+    
+    // Save undo stack (NEW - for persistence across commands)
+    std::ofstream undoFile(dataDir + "/undo_stack.json");
+    if (undoFile.is_open()) {
+        undoFile << "{\"actions\":[";
+        auto actions = engine.getUndoActions();
+        for (size_t i = 0; i < actions.size(); i++) {
+            if (i > 0) undoFile << ",";
+            undoFile << "{\"type\":" << actions[i].type << ","
+                     << "\"data\":\"" << escapeJson(actions[i].data) << "\"}";
+        }
+        undoFile << "]}";
+        undoFile.close();
+    }
 }
 
 // Process command and return JSON result
@@ -325,12 +369,14 @@ std::string processCommand(const std::string& command, const std::string& params
         }
         
         Transaction t = engine.addTransaction(type, amount, category, description, date);
-        result << "{\"success\":true,\"transaction\":" << transactionToJson(t) << "}";
+        result << "{\"success\":true,\"transaction\":" << transactionToJson(t) 
+               << ",\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
     else if (command == "delete_transaction") {
         std::string id = extractValue(params, "id");
         bool success = engine.deleteTransaction(id);
-        result << "{\"success\":" << (success ? "true" : "false") << "}";
+        result << "{\"success\":" << (success ? "true" : "false") 
+               << ",\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
     else if (command == "get_transactions") {
         auto transactions = engine.getTransactionsByDateDesc();
@@ -372,7 +418,8 @@ std::string processCommand(const std::string& command, const std::string& params
         engine.setBudget(category, limit);
         Budget b;
         engine.getBudget(category, b);
-        result << "{\"success\":true,\"budget\":" << budgetToJson(b) << "}";
+        result << "{\"success\":true,\"budget\":" << budgetToJson(b) 
+               << ",\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
     else if (command == "get_budgets") {
         auto budgets = engine.getAllBudgets();
@@ -399,7 +446,8 @@ std::string processCommand(const std::string& command, const std::string& params
         std::string category = extractValue(params, "category");
         
         Bill b = engine.addBill(name, amount, dueDate, category);
-        result << "{\"success\":true,\"bill\":" << billToJson(b) << "}";
+        result << "{\"success\":true,\"bill\":" << billToJson(b) 
+               << ",\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
     else if (command == "get_bills") {
         auto bills = engine.getAllBills();
@@ -413,12 +461,14 @@ std::string processCommand(const std::string& command, const std::string& params
     else if (command == "pay_bill") {
         std::string id = extractValue(params, "id");
         bool success = engine.payBill(id);
-        result << "{\"success\":" << (success ? "true" : "false") << "}";
+        result << "{\"success\":" << (success ? "true" : "false") 
+               << ",\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
     else if (command == "delete_bill") {
         std::string id = extractValue(params, "id");
         bool success = engine.removeBill(id);
-        result << "{\"success\":" << (success ? "true" : "false") << "}";
+        result << "{\"success\":" << (success ? "true" : "false") 
+               << ",\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
     else if (command == "get_top_expenses") {
         int k = 5;
@@ -494,6 +544,10 @@ std::string processCommand(const std::string& command, const std::string& params
                << "\"billCount\":" << engine.getBillCount() << ","
                << "\"canUndo\":" << (engine.canUndo() ? "true" : "false") << "}";
     }
+    else if (command == "clear_undo") {
+        engine.clearUndoStack();
+        result << "{\"success\":true,\"canUndo\":false}";
+    }
     else {
         result << "{\"error\":\"Unknown command: " << escapeJson(command) << "\"}";
     }
@@ -509,7 +563,7 @@ int main(int argc, char* argv[]) {
         dataDir = argv[1];
     }
     
-    // Load existing data
+    // Load existing data (including undo stack)
     loadData(dataDir);
     
     // Read command from stdin (JSON format)
@@ -522,10 +576,11 @@ int main(int argc, char* argv[]) {
     // Process command
     std::string output = processCommand(command, params.empty() ? input : params);
     
-    // Save data after modifications
+    // Save data after modifications (including undo stack)
     if (command == "add_transaction" || command == "delete_transaction" ||
         command == "set_budget" || command == "add_bill" || 
-        command == "pay_bill" || command == "delete_bill" || command == "undo") {
+        command == "pay_bill" || command == "delete_bill" || 
+        command == "undo" || command == "clear_undo") {
         saveData(dataDir);
     }
     

@@ -24,8 +24,9 @@ import {
   Lightbulb,
 } from "lucide-react";
 import { toast } from "sonner";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function DSAInfo() {
   const [dsaInfo, setDsaInfo] = useState(null);

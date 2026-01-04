@@ -13,7 +13,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
+;
 
 const navItems = [
   { path: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },

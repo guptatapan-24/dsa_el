@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, AlertTriangle, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Budgets() {
   const [budgets, setBudgets] = useState([]);

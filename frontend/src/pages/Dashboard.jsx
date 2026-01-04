@@ -11,8 +11,9 @@ import {
   Calendar,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Dashboard() {
   const [dashboard, setDashboard] = useState(null);
@@ -27,7 +28,8 @@ export default function Dashboard() {
         fetch(`${API}/dashboard`),
         fetch(`${API}/budgets/alerts`),
         fetch(`${API}/transactions/recent?count=5`),
-        fetch(`${API}/analytics/top-expenses?count=5`),
+        fetch(`${API}/top-expenses?count=5`)
+
       ]);
 
       const dashData = await dashRes.json();

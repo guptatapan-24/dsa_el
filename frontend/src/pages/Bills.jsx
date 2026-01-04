@@ -25,8 +25,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, isBefore, parseISO, startOfDay } from "date-fns";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Bills() {
   const [bills, setBills] = useState([]);

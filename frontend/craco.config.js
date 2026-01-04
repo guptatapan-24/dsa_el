@@ -78,6 +78,21 @@ if (config.enableVisualEdits && babelMetadataPlugin) {
 }
 
 webpackConfig.devServer = (devServerConfig) => {
+  // 🔴 FORCE correct WebSocket config (FIXES localhost:443 issue)
+  devServerConfig.client = {
+    ...devServerConfig.client,
+    webSocketURL: {
+      protocol: "ws",
+      hostname: "localhost",
+      port: 3000,
+      pathname: "/ws",
+    },
+  };
+
+  devServerConfig.port = 3000;
+  devServerConfig.hot = true;
+  devServerConfig.liveReload = true;
+
   // Apply visual edits dev server setup only if enabled
   if (config.enableVisualEdits && setupDevServer) {
     devServerConfig = setupDevServer(devServerConfig);
@@ -88,19 +103,17 @@ webpackConfig.devServer = (devServerConfig) => {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;
 
     devServerConfig.setupMiddlewares = (middlewares, devServer) => {
-      // Call original setup if exists
       if (originalSetupMiddlewares) {
         middlewares = originalSetupMiddlewares(middlewares, devServer);
       }
 
-      // Setup health endpoints
       setupHealthEndpoints(devServer, healthPluginInstance);
-
       return middlewares;
     };
   }
 
   return devServerConfig;
 };
+
 
 module.exports = webpackConfig;

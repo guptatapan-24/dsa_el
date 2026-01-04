@@ -19,10 +19,23 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 app = FastAPI(title="Finance Tracker API", description="DSA-powered Finance Tracker")
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://finance-tracker-1641.preview.emergentagent.com"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 api_router = APIRouter(prefix="/api")
 
 # Paths
-CPP_ENGINE = ROOT_DIR / "cpp" / "finance_engine"
+CPP_ENGINE = ROOT_DIR / "cpp" / "finance_engine.exe"
 DATA_DIR = ROOT_DIR / "data"
 
 # Ensure data directory exists
@@ -247,6 +260,11 @@ async def get_budget_alerts():
     result = call_cpp_engine("get_alerts")
     return result
 
+@api_router.get("/alerts", response_model=dict)
+async def get_alerts():
+    """Get budget alerts - shortcut route (50%, 80%, 100% thresholds)."""
+    result = call_cpp_engine("get_alerts")
+    return result
 
 # ----- Bills -----
 
@@ -282,19 +300,19 @@ async def delete_bill(bill_id: str):
 
 # ----- Analytics -----
 
-@api_router.get("/analytics/top-expenses", response_model=dict)
+@api_router.get("/top-expenses", response_model=dict)
 async def get_top_expenses(count: int = 5):
     """Get top expenses (using Max Heap - extract max)."""
     result = call_cpp_engine("get_top_expenses", {"count": str(count)})
     return result
 
-@api_router.get("/analytics/top-categories", response_model=dict)
+@api_router.get("/top-categories", response_model=dict)
 async def get_top_categories(count: int = 5):
     """Get top spending categories (using Category Max Heap)."""
     result = call_cpp_engine("get_top_categories", {"count": str(count)})
     return result
 
-@api_router.get("/analytics/monthly-summary", response_model=dict)
+@api_router.get("/monthly-summary", response_model=dict)
 async def get_monthly_summary(month: Optional[str] = None):
     """Get monthly summary (using BST month range query)."""
     params = {"month": month} if month else {}
@@ -387,12 +405,3 @@ async def get_dsa_info():
 
 # Include router in app
 app.include_router(api_router)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)

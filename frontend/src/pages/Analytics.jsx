@@ -20,8 +20,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
@@ -37,9 +38,10 @@ export default function Analytics() {
   const fetchData = async () => {
     try {
       const [topExpRes, topCatRes, summaryRes] = await Promise.all([
-        fetch(`${API}/analytics/top-expenses?count=10`),
-        fetch(`${API}/analytics/top-categories?count=10`),
-        fetch(`${API}/analytics/monthly-summary?month=${selectedMonth}`),
+      fetch(`${API}/top-expenses?count=10`),
+      fetch(`${API}/top-categories?count=10`),
+      fetch(`${API}/monthly-summary?month=${selectedMonth}`)
+
       ]);
 
       const topExpData = await topExpRes.json();

@@ -24,8 +24,9 @@ import { Trash2, Calendar as CalendarIcon, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function Transactions() {
   const [transactions, setTransactions] = useState([]);

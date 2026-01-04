@@ -17,8 +17,9 @@ import {
 import { Calendar as CalendarIcon, TrendingUp, TrendingDown } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+const API =
+  (process.env.REACT_APP_BACKEND_URL || "http://localhost:8001") + "/api";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function AddTransaction() {
   const navigate = useNavigate();
@@ -68,43 +69,49 @@ export default function AddTransaction() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!form.amount || !form.category) {
-      toast.error("Please fill in required fields");
+  e.preventDefault();
+
+  if (!form.amount || !form.category) {
+    toast.error("Please fill in required fields");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await fetch(`${API}/transactions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: form.type,
+        amount: Number(form.amount),
+        category: form.category,
+        description: form.description,
+        date: format(form.date, "yyyy-MM-dd"),
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("HTTP error " + res.status);
+    }
+
+    const data = await res.json();
+
+    if (data.success) {
+      toast.success("Transaction added");
+      setLoading(false);                 // 🔴 IMPORTANT
+      window.dispatchEvent(new Event("dataChanged"));
+      navigate("/transactions");
       return;
     }
 
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/transactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: form.type,
-          amount: parseFloat(form.amount),
-          category: form.category,
-          description: form.description,
-          date: format(form.date, "yyyy-MM-dd"),
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Transaction added!", {
-          description: `${form.type === "income" ? "Income" : "Expense"} of $${form.amount} recorded`,
-        });
-        window.dispatchEvent(new Event("dataChanged"));
-        navigate("/transactions");
-      } else {
-        toast.error("Failed to add transaction");
-      }
-    } catch {
-      toast.error("Failed to add transaction");
-    } finally {
-      setLoading(false);
-    }
-  };
+    throw new Error("API returned success=false");
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to add transaction");
+    setLoading(false);                   // 🔴 IMPORTANT
+  }
+};
 
   return (
     <div className="page-container" data-testid="add-transaction-page">

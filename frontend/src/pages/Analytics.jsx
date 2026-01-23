@@ -523,16 +523,16 @@ export default function Analytics() {
           </CardContent>
         </Card>
 
-        {/* Top Categories (Category Heap) */}
+        {/* Top Categories (Polynomial Hash Map) */}
         <Card data-testid="top-categories-analytics">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <PieChart className="w-5 h-5 text-primary" />
               Top Spending Categories
-              <span className="ds-badge ds-badge-heap">Category Heap</span>
+              <span className="ds-badge ds-badge-hash">Hash Map O(1)</span>
             </CardTitle>
             <CardDescription>
-              Categories sorted by total spending using Category Max Heap
+              Categories aggregated using Polynomial Hash Map for O(1) lookups
             </CardDescription>
           </CardHeader>
           <CardContent>

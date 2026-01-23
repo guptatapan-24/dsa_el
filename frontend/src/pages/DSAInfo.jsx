@@ -47,47 +47,47 @@ export default function DSAInfo() {
     fetchInfo();
   }, []);
 
-  // Viva preparation questions
+  // Viva preparation questions - Updated for new data structures
   const vivaQuestions = [
     {
-      q: "Why did you choose a Hash Map for budget management?",
-      a: "Hash Map provides O(1) average time for lookup, insert, and update operations. This is ideal for budget management where we need frequent category lookups. Unlike arrays or linked lists (O(n) search), HashMap allows instant access to any category's budget.",
+      q: "Why use a Red-Black Tree instead of a regular BST for transactions?",
+      a: "Red-Black Tree provides guaranteed O(log n) operations even in worst case. Regular BST can degrade to O(n) with skewed data (e.g., transactions added chronologically). Red-Black Tree maintains balance through color constraints and rotations, ensuring consistent performance for our date-ordered transactions.",
     },
     {
-      q: "Why use a Doubly Linked List instead of an array for transactions?",
-      a: "Doubly Linked List allows O(1) insertion at both ends and efficient bidirectional traversal. We can easily add new transactions at the front (most recent) and traverse backwards for history. Unlike arrays, we don't need to shift elements during deletion.",
+      q: "How does Skip List provide O(log n) expected time for ID lookups?",
+      a: "Skip List creates multiple layers of linked lists with probabilistic level assignment. Each level skips over elements in lower levels, creating 'express lanes'. On average, searching skips log(n) elements at each level, giving O(log n) expected time. Unlike balanced trees, it's simpler to implement and has good cache performance.",
     },
     {
-      q: "How does BST help with date range queries?",
-      a: "BST maintains transactions sorted by date, enabling O(log n + k) range queries where k is the result count. For date ranges, we traverse from start date to end date using in-order traversal, skipping irrelevant subtrees - much faster than O(n) linear search.",
+      q: "Why use an Indexed Priority Queue for budget alerts?",
+      a: "Indexed Priority Queue allows both priority-based extraction AND efficient updates to existing priorities in O(log n). When budget spending changes, we need to update the alert priority without removing and re-inserting. Regular heaps don't support efficient updates. IPQ maintains an index map for O(1) lookup of positions.",
     },
     {
-      q: "Why Max Heap for top expenses instead of sorting?",
-      a: "Max Heap allows us to extract top K expenses in O(k log n) time. Full sorting would take O(n log n). For finding top 5-10 expenses from thousands of transactions, heap is significantly faster. BuildHeap is also O(n) which is optimal.",
+      q: "How does Polynomial Hashing improve category lookups?",
+      a: "Polynomial hashing creates hash values using the formula: h = (c₁×p^(n-1) + c₂×p^(n-2) + ... + cₙ) mod m. This produces better distribution than simple sum-of-characters, reducing collisions. For category names like 'Food' vs 'Doof', polynomial hashing produces different values, improving O(1) average lookup time.",
     },
     {
-      q: "Why Queue for bills instead of Stack?",
-      a: "Bills follow FIFO order - bills added first should be paid first (based on due dates). Queue's FIFO behavior naturally represents this. Stack (LIFO) would pay newest bills first, which isn't practical for bill management.",
+      q: "Explain the Sliding Window algorithm for spending trends.",
+      a: "Sliding Window maintains a fixed-size window over the data stream. For 7-day trends, we keep daily aggregates and slide the window each day. When adding new day: add new value, remove oldest. This gives O(1) per update instead of O(n) recalculation. We precompute daily spending totals to enable efficient window operations.",
     },
     {
-      q: "How does Stack enable undo functionality?",
-      a: "Stack's LIFO property is perfect for undo - the last action is undone first. We push each action to stack, and pop to undo. This is the standard approach used in editors, browsers, and most software with undo functionality.",
+      q: "Why IntroSort instead of QuickSort for expense ranking?",
+      a: "IntroSort combines QuickSort, HeapSort, and InsertionSort. It starts with QuickSort for its good average performance, but switches to HeapSort if recursion depth exceeds 2×log(n) - preventing O(n²) worst case. For small partitions, InsertionSort is used for its low overhead. SQLite uses this hybrid approach for ORDER BY.",
     },
     {
-      q: "What advantage does Trie provide for autocomplete?",
-      a: "Trie enables O(m) prefix search where m is prefix length, regardless of total words. For autocomplete, this means instant suggestions as users type. Alternative approaches like filtering an array would be O(n*m) for n categories.",
+      q: "How does Z-Score anomaly detection work in real-time?",
+      a: "Z-Score measures how many standard deviations a value is from the mean: Z = (x - μ) / σ. For streaming data, we use Welford's algorithm to compute running mean and variance in O(1) per update without storing all values. If |Z| > threshold (typically 2.0), we flag as anomaly. This enables real-time detection as transactions are added.",
     },
     {
-      q: "What would you change if you had millions of transactions?",
-      a: "For scalability: 1) Use self-balancing BST (AVL/Red-Black) for guaranteed O(log n) operations, 2) Implement database indexing, 3) Add pagination for large results, 4) Consider B-trees for disk-based storage, 5) Use persistent heap structures.",
+      q: "What's the advantage of SQLite B-Tree over in-memory structures?",
+      a: "SQLite B-Tree provides: 1) Persistence - data survives restarts, 2) Memory efficiency - only loads needed pages, 3) ACID compliance - transactions are reliable, 4) Concurrent access - multiple readers, one writer, 5) Built-in indexing - automatic B-Tree for primary keys. For financial data, persistence and reliability are critical.",
     },
     {
-      q: "How would you handle concurrent access?",
-      a: "Add thread-safe mechanisms: 1) Mutex locks for write operations, 2) Read-write locks for better read performance, 3) Atomic operations where possible, 4) Transaction isolation for database operations.",
+      q: "How would you scale this system for millions of transactions?",
+      a: "For scale: 1) Partition by date ranges (sharding), 2) Add read replicas for analytics queries, 3) Use materialized views for aggregates, 4) Implement connection pooling, 5) Add caching layer (Redis) for hot data, 6) Consider columnar storage for analytics. The current O(log n) operations scale well, but I/O becomes the bottleneck.",
     },
     {
-      q: "What's the space complexity of your implementation?",
-      a: "O(n) for all structures where n is the data count. HashMap: O(n) for entries, DLL: O(n) for nodes, BST: O(n) for nodes, Heap: O(n) for array, Queue: O(n) for nodes, Stack: O(k) where k is undo limit, Trie: O(m*k) for m words of avg length k.",
+      q: "What's the space-time tradeoff in your anomaly detection?",
+      a: "Using Welford's algorithm, we store only 3 values per category (count, mean, M2) for O(1) space per category, O(k) total for k categories. Traditional approach would store all values for O(n) space. Tradeoff: We can't recompute if a transaction is deleted (would need rebuild). Also, early transactions have less reliable statistics.",
     },
   ];
 

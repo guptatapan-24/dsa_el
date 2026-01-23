@@ -55,7 +55,7 @@ class FinanceTrackerTester:
             if method.upper() == "GET":
                 response = self.session.get(url, params=params, timeout=30)
             elif method.upper() == "POST":
-                response = self.session.post(url, json=data, timeout=30)
+                response = self.session.post(url, json=data, params=params, timeout=30)
             elif method.upper() == "DELETE":
                 response = self.session.delete(url, timeout=30)
             else:

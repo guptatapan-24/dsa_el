@@ -107,6 +107,29 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Anomaly Alerts (Z-Score Detection) */}
+      {anomalies.length > 0 && (
+        <div className="mb-6 space-y-3" data-testid="anomaly-alerts">
+          {anomalies.slice(0, 3).map((anomaly, idx) => (
+            <Alert
+              key={idx}
+              className="border-orange-200 bg-orange-50"
+              data-testid={`anomaly-${idx}`}
+            >
+              <Zap className="h-4 w-4 text-orange-600" />
+              <AlertTitle className="font-semibold text-orange-800">
+                Unusual {anomaly.isHigh ? "High" : "Low"} Expense Detected
+                <span className="ds-badge ds-badge-zscore ml-2">Z-Score: {anomaly.zScore}</span>
+              </AlertTitle>
+              <AlertDescription className="text-orange-700">
+                {anomaly.category}: {formatCurrency(anomaly.amount)} 
+                (Average: {formatCurrency(anomaly.mean)}) - {anomaly.description || 'No description'}
+              </AlertDescription>
+            </Alert>
+          ))}
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <Card className="kpi-card card-hover" data-testid="balance-card">

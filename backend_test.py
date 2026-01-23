@@ -617,9 +617,9 @@ class FinanceTrackerTester:
         # First add a transaction to have something to undo
         test_transaction = {
             "type": "expense",
-            "amount": 25.0,
-            "category": "Test",
-            "description": "Test for undo",
+            "amount": 75.25,
+            "category": "Transportation",
+            "description": "Gas for car - test for undo",
             "date": "2025-01-16"
         }
         
@@ -628,13 +628,26 @@ class FinanceTrackerTester:
             self.log_test("Undo Setup", False, "Could not add transaction for undo test")
             return False
         
-        # Now test undo
+        add_data = add_response.json()
+        if not add_data.get("success"):
+            self.log_test("Undo Setup", False, "Transaction creation failed", add_data)
+            return False
+        
+        self.log_test("Undo Setup", True, "Added test transaction for undo")
+        
+        # Now test POST /api/undo
         response = self.make_request("POST", "/undo")
         if isinstance(response, tuple):
             self.log_test("Undo Operation", False, f"Request failed: {response[1]}")
         elif response.status_code == 200:
             data = response.json()
-            self.log_test("Undo Operation", True, "Undo operation completed successfully")
+            success = data.get("success", False)
+            can_undo = data.get("canUndo", False)
+            ds_info = data.get("dsInfo", "")
+            if success:
+                self.log_test("Undo Operation", True, f"Undo successful. Can undo more: {can_undo}. DSA: {ds_info}")
+            else:
+                self.log_test("Undo Operation", False, "Undo operation failed", data)
         else:
             self.log_test("Undo Operation", False, f"HTTP {response.status_code}", response.text)
         

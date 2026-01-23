@@ -252,15 +252,16 @@ class FinanceTrackerTester:
         if response.status_code == 200:
             data = response.json()
             budgets = data.get("budgets", [])
-            self.log_test("Get All Budgets", True, f"Found {len(budgets)} budgets")
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get All Budgets", True, f"Found {len(budgets)} budgets. DSA: {ds_info}")
         else:
             self.log_test("Get All Budgets", False, f"HTTP {response.status_code}", response.text)
             return False
         
-        # Test POST /api/budgets
+        # Test POST /api/budgets (set budget)
         new_budget = {
-            "category": "Food",
-            "limit": 200.0
+            "category": "Entertainment",
+            "limit": 300.0
         }
         
         response = self.make_request("POST", "/budgets", new_budget)
@@ -268,7 +269,13 @@ class FinanceTrackerTester:
             self.log_test("Set Budget", False, f"Request failed: {response[1]}")
         elif response.status_code == 200:
             data = response.json()
-            self.log_test("Set Budget", True, f"Set budget for {new_budget['category']}: ${new_budget['limit']}")
+            if data.get("success") and "budget" in data:
+                budget = data["budget"]
+                ds_info = data.get("dsInfo", "")
+                self.log_test("Set Budget", True, 
+                             f"Set budget for {new_budget['category']}: ${new_budget['limit']}. DSA: {ds_info}")
+            else:
+                self.log_test("Set Budget", False, "Invalid response structure", data)
         else:
             self.log_test("Set Budget", False, f"HTTP {response.status_code}", response.text)
         
@@ -279,9 +286,21 @@ class FinanceTrackerTester:
         elif response.status_code == 200:
             data = response.json()
             alerts = data.get("alerts", [])
-            self.log_test("Get Budget Alerts", True, f"Found {len(alerts)} budget alerts")
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get Budget Alerts", True, f"Found {len(alerts)} budget alerts. DSA: {ds_info}")
         else:
             self.log_test("Get Budget Alerts", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test GET /api/alerts (shortcut route)
+        response = self.make_request("GET", "/alerts")
+        if isinstance(response, tuple):
+            self.log_test("Get Alerts (shortcut)", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            alerts = data.get("alerts", [])
+            self.log_test("Get Alerts (shortcut)", True, f"Found {len(alerts)} alerts via shortcut route")
+        else:
+            self.log_test("Get Alerts (shortcut)", False, f"HTTP {response.status_code}", response.text)
         
         return True
     

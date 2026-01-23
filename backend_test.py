@@ -65,29 +65,40 @@ class FinanceTrackerTester:
         except requests.exceptions.RequestException as e:
             return None, str(e)
     
-    def test_health_endpoint(self):
-        """Test /api/health endpoint"""
-        print("🔍 Testing Health Endpoint...")
-        response = self.make_request("GET", "/health")
+    def test_root_and_health(self):
+        """Test root and health endpoints"""
+        print("🔍 Testing Root & Health Endpoints...")
         
+        # Test GET /api/ (root)
+        response = self.make_request("GET", "/")
+        if isinstance(response, tuple):
+            self.log_test("Root Endpoint", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            message = data.get("message", "")
+            if "Finance Tracker API" in message:
+                self.log_test("Root Endpoint", True, f"Message: {message}")
+            else:
+                self.log_test("Root Endpoint", False, f"Unexpected message: {message}", data)
+        else:
+            self.log_test("Root Endpoint", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test GET /api/health
+        response = self.make_request("GET", "/health")
         if isinstance(response, tuple):
             self.log_test("Health Check", False, f"Request failed: {response[1]}")
-            return False
-        
-        if response.status_code == 200:
+        elif response.status_code == 200:
             data = response.json()
-            engine_available = data.get("engine_available", False)
             status = data.get("status", "unknown")
+            database = data.get("database", "unknown")
+            data_structures = data.get("dataStructures", [])
             
-            if engine_available and status == "healthy":
-                self.log_test("Health Check", True, f"Status: {status}, Engine: Available")
-                return True
+            if status == "healthy" and database == "sqlite" and len(data_structures) >= 7:
+                self.log_test("Health Check", True, f"Status: {status}, DB: {database}, DSA: {len(data_structures)} structures")
             else:
-                self.log_test("Health Check", False, f"Status: {status}, Engine: {engine_available}", data)
-                return False
+                self.log_test("Health Check", False, f"Status: {status}, DB: {database}, DSA count: {len(data_structures)}", data)
         else:
             self.log_test("Health Check", False, f"HTTP {response.status_code}", response.text)
-            return False
     
     def test_dashboard_endpoint(self):
         """Test /api/dashboard endpoint"""
@@ -100,7 +111,7 @@ class FinanceTrackerTester:
         
         if response.status_code == 200:
             data = response.json()
-            required_fields = ["balance", "totalIncome", "totalExpenses", "transactionCount"]
+            required_fields = ["balance", "totalIncome", "totalExpenses", "transactionCount", "budgetCount", "billCount", "canUndo"]
             
             missing_fields = [field for field in required_fields if field not in data]
             if missing_fields:
@@ -111,9 +122,10 @@ class FinanceTrackerTester:
             balance = data.get("balance", 0)
             income = data.get("totalIncome", 0)
             expenses = data.get("totalExpenses", 0)
+            tx_count = data.get("transactionCount", 0)
             
             self.log_test("Dashboard Data", True, 
-                         f"Balance: ${balance:.2f}, Income: ${income:.2f}, Expenses: ${expenses:.2f}")
+                         f"Balance: ${balance:.2f}, Income: ${income:.2f}, Expenses: ${expenses:.2f}, Transactions: {tx_count}")
             return True
         else:
             self.log_test("Dashboard Data", False, f"HTTP {response.status_code}", response.text)

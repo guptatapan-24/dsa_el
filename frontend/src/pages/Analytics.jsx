@@ -139,10 +139,131 @@ export default function Analytics() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Analytics</h1>
         <p className="text-slate-500 mt-1">
-          Financial insights powered by data structures
-          <span className="ds-badge ds-badge-heap ml-2">Max Heap</span>
-          <span className="ds-badge ds-badge-bst ml-1">BST</span>
+          Financial insights powered by advanced data structures
+          <span className="ds-badge ds-badge-sort ml-2">IntroSort</span>
+          <span className="ds-badge ds-badge-bst ml-1">Red-Black Tree</span>
+          <span className="ds-badge ds-badge-window ml-1">Sliding Window</span>
         </p>
+      </div>
+
+      {/* Spending Trends Section (Sliding Window) */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-primary" />
+          Spending Trends
+          <span className="ds-badge ds-badge-window">Sliding Window O(n)</span>
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 7-Day Trend */}
+          {trend7Day && (
+            <Card data-testid="trend-7day">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>7-Day Trend</span>
+                  <Badge variant={trend7Day.trend === 'increasing' ? 'destructive' : trend7Day.trend === 'decreasing' ? 'success' : 'secondary'}>
+                    {trend7Day.trend === 'increasing' ? '↑ Increasing' : trend7Day.trend === 'decreasing' ? '↓ Decreasing' : '→ Stable'}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>{trend7Day.startDate} to {trend7Day.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Total Expenses</span>
+                    <span className="font-bold expense-text">{formatCurrency(trend7Day.totalExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Total Income</span>
+                    <span className="font-bold income-text">{formatCurrency(trend7Day.totalIncome)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Avg Daily Expense</span>
+                    <span className="font-bold text-primary">{formatCurrency(trend7Day.avgDailyExpense)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 30-Day Trend */}
+          {trend30Day && (
+            <Card data-testid="trend-30day">
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>30-Day Trend</span>
+                  <Badge variant={trend30Day.trend === 'increasing' ? 'destructive' : trend30Day.trend === 'decreasing' ? 'success' : 'secondary'}>
+                    {trend30Day.trend === 'increasing' ? '↑ Increasing' : trend30Day.trend === 'decreasing' ? '↓ Decreasing' : '→ Stable'}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>{trend30Day.startDate} to {trend30Day.endDate}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Total Expenses</span>
+                    <span className="font-bold expense-text">{formatCurrency(trend30Day.totalExpenses)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Total Income</span>
+                    <span className="font-bold income-text">{formatCurrency(trend30Day.totalIncome)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Avg Daily Expense</span>
+                    <span className="font-bold text-primary">{formatCurrency(trend30Day.avgDailyExpense)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Anomaly Detection Section (Z-Score) */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Zap className="w-5 h-5 text-orange-500" />
+          Anomaly Detection
+          <span className="ds-badge ds-badge-zscore">Z-Score O(1)</span>
+        </h2>
+        <Card data-testid="anomaly-section">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-orange-500" />
+              Unusual Expenses Detected
+            </CardTitle>
+            <CardDescription>
+              Real-time anomaly detection using Z-Score algorithm with Welford's streaming statistics
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {anomalies.length === 0 ? (
+              <p className="text-slate-500 text-center py-4">No anomalies detected in recent transactions</p>
+            ) : (
+              <div className="space-y-3">
+                {anomalies.map((anomaly, idx) => (
+                  <Alert
+                    key={idx}
+                    className={`${anomaly.isHigh ? 'border-red-200 bg-red-50' : 'border-blue-200 bg-blue-50'}`}
+                    data-testid={`anomaly-item-${idx}`}
+                  >
+                    <Zap className={`h-4 w-4 ${anomaly.isHigh ? 'text-red-600' : 'text-blue-600'}`} />
+                    <AlertTitle className={`font-semibold ${anomaly.isHigh ? 'text-red-800' : 'text-blue-800'}`}>
+                      {anomaly.isHigh ? 'Unusually HIGH' : 'Unusually LOW'} expense in {anomaly.category}
+                    </AlertTitle>
+                    <AlertDescription className={anomaly.isHigh ? 'text-red-700' : 'text-blue-700'}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
+                        <div>Amount: <strong>{formatCurrency(anomaly.amount)}</strong></div>
+                        <div>Average: <strong>{formatCurrency(anomaly.mean)}</strong></div>
+                        <div>Z-Score: <strong>{anomaly.zScore}</strong></div>
+                        <div>Date: <strong>{anomaly.date}</strong></div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Monthly Summary Section */}

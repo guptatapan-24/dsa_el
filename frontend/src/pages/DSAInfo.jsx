@@ -123,20 +123,20 @@ export default function DSAInfo() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div className="p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-primary">6+</div>
+              <div className="text-3xl font-bold text-primary">7</div>
               <div className="text-sm text-slate-500">Data Structures</div>
             </div>
             <div className="p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-primary">C++</div>
-              <div className="text-sm text-slate-500">Backend Logic</div>
+              <div className="text-3xl font-bold text-primary">SQLite</div>
+              <div className="text-sm text-slate-500">Database</div>
             </div>
             <div className="p-4 bg-white rounded-lg shadow-sm">
               <div className="text-3xl font-bold text-primary">React</div>
               <div className="text-sm text-slate-500">Frontend UI</div>
             </div>
             <div className="p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-primary">JSON</div>
-              <div className="text-sm text-slate-500">Data Exchange</div>
+              <div className="text-3xl font-bold text-primary">FastAPI</div>
+              <div className="text-sm text-slate-500">Backend API</div>
             </div>
           </div>
         </CardContent>

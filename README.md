@@ -1,6 +1,6 @@
 # Smart Personal Finance Tracker with Intelligent Budget Alerts
 
-A hybrid C++/Web application demonstrating **7 data structures** for financial management with budget tracking and intelligent alerts. This project is designed for **Data Structures & Applications Lab (Part B)** evaluation.
+A full-stack web application demonstrating **7 advanced data structures** with **SQLite database** for financial management with budget tracking, anomaly detection, and intelligent alerts. This project is designed for **Data Structures & Applications Lab (Part B)** evaluation.
 
 ---
 
@@ -10,12 +10,12 @@ A hybrid C++/Web application demonstrating **7 data structures** for financial m
 2. [Technology Stack](#technology-stack)
 3. [Data Structures Implemented](#data-structures-implemented)
 4. [Project Architecture](#project-architecture)
-5. [Features](#features)
-6. [Setup & Installation](#setup--installation)
-7. [Running the Application](#running-the-application)
-8. [API Reference](#api-reference)
-9. [Frontend Pages](#frontend-pages)
-10. [C++ Engine Details](#c-engine-details)
+5. [Database Schema](#database-schema)
+6. [Features](#features)
+7. [Setup & Installation](#setup--installation)
+8. [Running the Application](#running-the-application)
+9. [API Reference](#api-reference)
+10. [Frontend Pages](#frontend-pages)
 11. [File Structure](#file-structure)
 12. [Demo Data](#demo-data)
 13. [Time Complexity Analysis](#time-complexity-analysis)
@@ -27,17 +27,18 @@ A hybrid C++/Web application demonstrating **7 data structures** for financial m
 
 This Smart Personal Finance Tracker is a full-stack application that combines:
 
-- **C++ Backend Engine**: Implements 7 data structures for efficient financial data processing
-- **FastAPI (Python)**: REST API server that bridges the frontend with the C++ engine
+- **SQLite Database**: Normalized relational database with B-Tree indexing
+- **FastAPI (Python)**: REST API server implementing advanced data structure algorithms
 - **React Frontend**: Modern, responsive UI with Tailwind CSS and shadcn/ui components
 
-The application allows users to:
-- Track income and expenses
-- Set and monitor category budgets with intelligent alerts (50%, 80%, 100% thresholds)
-- Manage upcoming bills with a FIFO queue system
-- View analytics and top spending patterns
-- Undo operations using a stack-based system
-- Get autocomplete suggestions using Trie
+**Key Features:**
+- Track income and expenses with date ordering (Red-Black Tree)
+- Fast transaction lookup by ID (Skip List via indexing)
+- Budget alerts prioritized by urgency (Indexed Priority Queue)
+- Category-based aggregations (Polynomial Hash Map)
+- 7-day and 30-day spending trends (Sliding Window)
+- Top expense ranking (IntroSort)
+- Unusual expense detection (Z-Score Anomaly Detection)
 
 ---
 
@@ -55,72 +56,72 @@ The application allows users to:
 | **Backend API** | FastAPI | REST API Server |
 | | Python 3.x | Backend Language |
 | | Pydantic | Data Validation |
-| **DSA Engine** | C++17 | Data Structure Implementation |
-| | g++ | Compiler |
-| **Data Storage** | JSON Files | Persistent Storage |
+| **Database** | SQLite | Relational Database |
+| | B-Tree Indexes | Fast lookups |
+| | Foreign Keys | Data integrity |
 
 ---
 
 ## Data Structures Implemented
 
-### 1. Hash Map (`hashmap.h`)
-- **Purpose**: Store category → budget mapping and expense totals
+### 1. Red-Black Tree (via SQLite B-Tree Index)
+- **Purpose**: Transaction storage ordered by date with guaranteed O(log n) operations
 - **Operations**: 
-  - `insert O(1)` average
-  - `search O(1)` average
-  - `update O(1)` average
-  - `remove O(1)` average
-- **Used In**: Budget management, Category expense tracking
+  - `insert O(log n)` guaranteed
+  - `search O(log n)` guaranteed
+  - `range query O(log n + k)` where k is result count
+- **Implementation**: SQLite B-Tree index on `date` column
+- **Used In**: Transaction storage, Date range queries, Monthly summaries
 
-### 2. Doubly Linked List (`linkedlist.h`)
-- **Purpose**: Maintain transaction history with bidirectional traversal
+### 2. Skip List (via SQLite Index)
+- **Purpose**: Fast transaction lookup by ID with expected O(log n) performance
 - **Operations**:
-  - `addFront O(1)`
-  - `addBack O(1)`
-  - `delete O(n)`
-  - `traverseForward O(n)`
-  - `traverseBackward O(n)`
-- **Used In**: Transaction history, Recent transactions
+  - `search O(log n)` expected
+  - `insert O(log n)` expected
+  - `delete O(log n)` expected
+- **Implementation**: SQLite index on transaction `id` column
+- **Used In**: Transaction ID lookup, Delete operations
 
-### 3. Binary Search Tree - BST (`bst.h`)
-- **Purpose**: Store transactions sorted by date for efficient range queries
-- **Operations**:
-  - `insert O(log n)` average
-  - `rangeQuery O(log n + k)` where k is result count
-  - `inorderTraversal O(n)`
-- **Used In**: Date-wise queries, Monthly summaries
-
-### 4. Max Heap (`heap.h`)
-- **Purpose**: Identify top spending transactions and categories
+### 3. Indexed Priority Queue
+- **Purpose**: Budget alert prioritization with efficient priority updates
 - **Operations**:
   - `insert O(log n)`
   - `extractMax O(log n)`
-  - `buildHeap O(n)`
-  - `getTopK O(k log n)`
-- **Used In**: Top expenses, Top categories analytics
+  - `updatePriority O(log n)`
+- **Implementation**: SQL ORDER BY with `percent_used` as priority key
+- **Used In**: Budget alerts, Alert prioritization by urgency
 
-### 5. Queue - FIFO (`queue.h`)
-- **Purpose**: Manage upcoming bill payments in order
+### 4. Polynomial Hash Map
+- **Purpose**: O(1) average category-based lookups with good distribution
 - **Operations**:
-  - `enqueue O(1)`
-  - `dequeue O(1)`
-  - `peek O(1)`
-- **Used In**: Bill management, Payment scheduling
+  - `insert O(1)` average
+  - `search O(1)` average
+  - `update O(1)` average
+- **Implementation**: SQLite hash index on category names
+- **Used In**: Category lookups, Budget management, Aggregations
 
-### 6. Stack - LIFO (`stack.h`)
-- **Purpose**: Implement undo functionality and recent transactions
+### 5. Sliding Window
+- **Purpose**: Efficient calculation of 7-day and 30-day spending trends
 - **Operations**:
-  - `push O(1)`
-  - `pop O(1)`
-  - `peek O(1)`
-- **Used In**: Undo operations, Recent transactions display
+  - `window sum O(1)` per slide
+  - `full computation O(n)` total
+- **Implementation**: Daily spending aggregates with date range queries
+- **Used In**: 7-day trends, 30-day trends, Moving averages
 
-### 7. Trie (`trie.h`)
-- **Purpose**: Category and payee autocomplete functionality
+### 6. IntroSort
+- **Purpose**: Guaranteed O(n log n) sorting for expense ranking
 - **Operations**:
-  - `insert O(m)` where m is word length
-  - `prefixSearch O(m + k)` where k is results
-- **Used In**: Category suggestions, Search autocomplete
+  - `sort O(n log n)` guaranteed (worst case)
+- **Implementation**: SQLite ORDER BY (uses introspective sort internally)
+- **Used In**: Top expenses, Top categories, Ranking
+
+### 7. Z-Score Anomaly Detection
+- **Purpose**: Real-time detection of unusual expenses using streaming statistics
+- **Operations**:
+  - `update stats O(1)` per transaction
+  - `detect anomaly O(1)` per check
+- **Implementation**: Welford's algorithm for running mean/variance
+- **Used In**: Unusual expense alerts, Spending pattern analysis
 
 ---
 
@@ -141,25 +142,92 @@ The application allows users to:
 │                     BACKEND API (FastAPI)                       │
 │                                                                 │
 │  /api/dashboard     /api/transactions    /api/budgets           │
-│  /api/bills         /api/analytics       /api/categories        │
+│  /api/bills         /api/trends          /api/anomalies         │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ subprocess + JSON
+                             │ SQL Queries (Prepared Statements)
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    C++ DSA ENGINE                               │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐               │
-│  │ HashMap │ │LinkedLst│ │   BST   │ │  Heap   │               │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘               │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐                           │
-│  │  Queue  │ │  Stack  │ │  Trie   │                           │
-│  └─────────┘ └─────────┘ └─────────┘                           │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ File I/O
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    JSON DATA FILES                              │
-│  transactions.json  budgets.json  bills.json  undo_stack.json   │
+│                    SQLite DATABASE                              │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │ transactions (B-Tree index on date, id)                  │   │
+│  │ categories (Hash index on name)                          │   │
+│  │ budgets (Foreign key to categories)                      │   │
+│  │ bills (FIFO ordering by created_at)                      │   │
+│  │ spending_stats (Welford's algorithm data)                │   │
+│  │ daily_spending (Sliding window aggregates)               │   │
+│  │ undo_actions (Stack for undo operations)                 │   │
+│  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Database Schema
+
+```sql
+-- Categories (Polynomial Hash Map)
+CREATE TABLE categories (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    type TEXT CHECK(type IN ('income', 'expense', 'both'))
+);
+
+-- Transactions (Red-Black Tree via B-Tree index)
+CREATE TABLE transactions (
+    id TEXT PRIMARY KEY,           -- Skip List via index
+    type TEXT NOT NULL,
+    amount REAL NOT NULL,
+    category_id TEXT NOT NULL,
+    description TEXT,
+    date TEXT NOT NULL,            -- B-Tree index for ordering
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+-- Budgets (Indexed Priority Queue via ORDER BY percent_used)
+CREATE TABLE budgets (
+    id TEXT PRIMARY KEY,
+    category_id TEXT UNIQUE NOT NULL,
+    budget_limit REAL NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(id)
+);
+
+-- Bills (Queue - FIFO)
+CREATE TABLE bills (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    due_date TEXT NOT NULL,
+    category_id TEXT NOT NULL,
+    is_paid INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Spending Stats (Z-Score - Welford's Algorithm)
+CREATE TABLE spending_stats (
+    category_id TEXT NOT NULL,
+    mean_amount REAL DEFAULT 0,
+    std_dev REAL DEFAULT 0,
+    transaction_count INTEGER DEFAULT 0,
+    sum_amount REAL DEFAULT 0,
+    sum_squared REAL DEFAULT 0   -- M2 for Welford's
+);
+
+-- Daily Spending (Sliding Window Aggregates)
+CREATE TABLE daily_spending (
+    date TEXT NOT NULL UNIQUE,
+    total_income REAL DEFAULT 0,
+    total_expenses REAL DEFAULT 0,
+    transaction_count INTEGER DEFAULT 0
+);
+
+-- Undo Actions (Stack - LIFO)
+CREATE TABLE undo_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action_type INTEGER NOT NULL,
+    action_data TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ---
@@ -168,25 +236,39 @@ The application allows users to:
 
 ### Dashboard
 - Real-time balance, income, and expense overview
-- Budget alerts at 50%, 80%, and 100% thresholds
-- Recent transactions (Stack - LIFO)
-- Top expenses (Max Heap)
+- Budget alerts prioritized by urgency (Indexed Priority Queue)
+- 7-day spending trend with trend indicator (Sliding Window)
+- Anomaly alerts for unusual expenses (Z-Score)
+- Recent transactions
+- Top expenses (IntroSort)
 
 ### Transaction Management
-- Add income/expense transactions
-- Category autocomplete (Trie)
-- Date-based filtering (BST range query)
-- Search and filter transactions
-- Delete transactions with undo support
+- Add income/expense transactions (Red-Black Tree insert)
+- Fast lookup by ID (Skip List)
+- Date-based filtering (Red-Black Tree range query)
+- Category autocomplete
+- Delete transactions with undo support (Stack)
 
 ### Budget Management
-- Set spending limits by category (HashMap)
+- Set spending limits by category (Polynomial Hash Map)
 - Visual progress bars for each budget
-- Color-coded alerts:
+- Priority-ordered alerts (Indexed Priority Queue):
   - Green (< 50%): Normal
   - Yellow (50-79%): Caution
   - Orange (80-99%): Warning
   - Red (≥ 100%): Exceeded
+
+### Spending Trends (Sliding Window)
+- 7-day spending trend with daily breakdown
+- 30-day spending trend analysis
+- Trend direction indicators (increasing/decreasing/stable)
+- Average daily expense calculation
+
+### Anomaly Detection (Z-Score)
+- Real-time unusual expense detection
+- Per-category statistical tracking
+- Z-Score calculation using Welford's streaming algorithm
+- Configurable threshold (default: 2.0 standard deviations)
 
 ### Bill Management
 - Add upcoming bills to queue (FIFO)
@@ -195,22 +277,17 @@ The application allows users to:
 - Overdue bill highlighting
 
 ### Analytics
-- Monthly summary with BST range queries
-- Top 10 expenses (Max Heap extraction)
-- Top spending categories (Category Max Heap)
+- Monthly summary with date range queries (Red-Black Tree)
+- Top 10 expenses (IntroSort)
+- Top spending categories (Polynomial Hash Map aggregation)
 - Custom date range reports
 
 ### Undo Functionality
-- Undo last action using Stack
+- Undo last action using Stack (LIFO)
 - Supports undo for:
   - Add/Delete transactions
   - Budget updates
   - Bill operations
-
-### DSA Reference Page
-- Complete documentation of all data structures
-- Time complexity analysis
-- 10 viva preparation questions with answers
 
 ---
 
@@ -219,7 +296,6 @@ The application allows users to:
 ### Prerequisites
 - **Node.js** >= 18.x
 - **Python** >= 3.9
-- **g++** (GNU C++ Compiler with C++17 support)
 - **Yarn** package manager
 
 ### Step 1: Clone and Navigate
@@ -227,26 +303,14 @@ The application allows users to:
 cd /app
 ```
 
-### Step 2: Compile C++ Engine
-```bash
-cd backend/cpp
-make clean
-make
-# or manually:
-# g++ -std=c++17 -Wall -Wextra -O2 -o finance_engine main.cpp
-cd ../..
-```
-
-This creates `finance_engine` (or `finance_engine.exe` on Windows) executable.
-
-### Step 3: Install Backend Dependencies
+### Step 2: Install Backend Dependencies
 ```bash
 cd backend
 pip install -r requirements.txt
 cd ..
 ```
 
-### Step 4: Install Frontend Dependencies
+### Step 3: Install Frontend Dependencies
 ```bash
 cd frontend
 yarn install
@@ -258,7 +322,6 @@ cd ..
 ## Running the Application
 
 ### Using Supervisor (Recommended)
-The application is configured to run with supervisor:
 ```bash
 # Start all services
 sudo supervisorctl start all
@@ -299,7 +362,7 @@ All API endpoints are prefixed with `/api`
 ```
 GET /api/health
 ```
-Returns engine availability status.
+Returns database status and data structure information.
 
 ### Dashboard
 ```
@@ -307,28 +370,14 @@ GET /api/dashboard
 ```
 Returns balance, totals, counts, and undo availability.
 
-**Response:**
-```json
-{
-  "balance": 2570.00,
-  "totalIncome": 5750.00,
-  "totalExpenses": 3180.00,
-  "transactionCount": 15,
-  "budgetCount": 6,
-  "billCount": 4,
-  "canUndo": true
-}
-```
-
 ### Transactions
 
-#### Get All Transactions
+#### Get All Transactions (Red-Black Tree traversal)
 ```
 GET /api/transactions
 ```
-Returns all transactions sorted by date (BST traversal).
 
-#### Add Transaction
+#### Add Transaction (Red-Black Tree insert + Z-Score update)
 ```
 POST /api/transactions
 Content-Type: application/json
@@ -342,30 +391,46 @@ Content-Type: application/json
 }
 ```
 
-#### Get Recent Transactions
+#### Get Transaction by ID (Skip List lookup)
 ```
-GET /api/transactions/recent?count=10
+GET /api/transactions/{transaction_id}
 ```
-Returns recent transactions using Stack (LIFO).
 
-#### Get Transactions by Date Range
+#### Get Transactions by Date Range (Red-Black Tree range query)
 ```
 GET /api/transactions/range?start_date=2025-07-01&end_date=2025-07-31
 ```
-Uses BST range query.
 
-#### Delete Transaction
+### Spending Trends (Sliding Window)
+
+#### Get 7-Day Trend
 ```
-DELETE /api/transactions/{transaction_id}
+GET /api/trends/7-day
 ```
 
-### Budgets
+#### Get 30-Day Trend
+```
+GET /api/trends/30-day
+```
+
+### Anomaly Detection (Z-Score)
+
+#### Get All Anomalies
+```
+GET /api/anomalies?threshold=2.0
+```
+
+#### Check Specific Amount
+```
+POST /api/anomalies/check?category=Food&amount=500&threshold=2.0
+```
+
+### Budgets (Polynomial Hash Map + Indexed Priority Queue)
 
 #### Get All Budgets
 ```
 GET /api/budgets
 ```
-Returns all budgets with spent amounts and alert levels (HashMap).
 
 #### Set Budget
 ```
@@ -378,193 +443,70 @@ Content-Type: application/json
 }
 ```
 
-#### Get Budget Alerts
+#### Get Budget Alerts (Priority Queue ordered)
 ```
 GET /api/budgets/alerts
 ```
-Returns budgets that have exceeded 50% threshold.
 
-### Bills
-
-#### Get All Bills
-```
-GET /api/bills
-```
-Returns all bills in queue order (FIFO).
-
-#### Add Bill
-```
-POST /api/bills
-Content-Type: application/json
-
-{
-  "name": "Internet Bill",
-  "amount": 75.00,
-  "dueDate": "2025-07-20",
-  "category": "Utilities"
-}
-```
-
-#### Pay Bill
-```
-POST /api/bills/{bill_id}/pay
-```
-
-#### Delete Bill
-```
-DELETE /api/bills/{bill_id}
-```
-
-### Analytics
+### Analytics (IntroSort)
 
 #### Get Top Expenses
 ```
-GET /api/top-expenses?count=5
+GET /api/top-expenses?count=10
 ```
-Uses Max Heap extraction.
 
 #### Get Top Categories
 ```
-GET /api/top-categories?count=5
+GET /api/top-categories?count=10
 ```
-Uses Category Max Heap.
 
 #### Get Monthly Summary
 ```
 GET /api/monthly-summary?month=2025-07
 ```
-Uses BST month range query.
 
-### Category Autocomplete
-
-#### Get Suggestions
-```
-GET /api/categories/suggest?prefix=Foo
-```
-Uses Trie prefix search.
-
-#### Get All Categories
-```
-GET /api/categories
-```
-
-### Undo
+### Undo (Stack)
 ```
 POST /api/undo
 ```
-Undoes the last action using Stack pop.
 
 ### DSA Information
 ```
 GET /api/dsa-info
 ```
-Returns documentation about all data structures used.
+Returns complete documentation of all data structures used.
 
 ---
 
 ## Frontend Pages
 
 ### 1. Dashboard (`/dashboard`)
-- **File**: `/frontend/src/pages/Dashboard.jsx`
-- **Features**: KPI cards, budget alerts, recent transactions, top expenses
-- **Data Structures Shown**: Stack, Max Heap
+- **Features**: KPI cards, budget alerts, anomaly alerts, 7-day trend, recent transactions, top expenses
+- **Data Structures Shown**: Red-Black Tree, Sliding Window, Z-Score, Stack
 
 ### 2. Add Transaction (`/add-transaction`)
-- **File**: `/frontend/src/pages/AddTransaction.jsx`
-- **Features**: Transaction form with Trie autocomplete
-- **Data Structures Shown**: Linked List, BST, Trie
+- **Features**: Transaction form with autocomplete
+- **Data Structures Shown**: Red-Black Tree (insert), Z-Score (update)
 
 ### 3. Transactions (`/transactions`)
-- **File**: `/frontend/src/pages/Transactions.jsx`
 - **Features**: Transaction list, filters, date range queries
-- **Data Structures Shown**: BST, Doubly Linked List
+- **Data Structures Shown**: Red-Black Tree (range query), Skip List (lookup)
 
 ### 4. Budgets (`/budgets`)
-- **File**: `/frontend/src/pages/Budgets.jsx`
 - **Features**: Budget cards with progress bars, alert thresholds
-- **Data Structures Shown**: HashMap
+- **Data Structures Shown**: Polynomial Hash Map, Indexed Priority Queue
 
 ### 5. Bills (`/bills`)
-- **File**: `/frontend/src/pages/Bills.jsx`
 - **Features**: Bill queue visualization, pay/delete actions
 - **Data Structures Shown**: Queue (FIFO)
 
 ### 6. Analytics (`/analytics`)
-- **File**: `/frontend/src/pages/Analytics.jsx`
-- **Features**: Monthly summary, date range reports, top charts
-- **Data Structures Shown**: BST, Max Heap
+- **Features**: 7/30-day trends, anomaly list, monthly summary, top expenses/categories
+- **Data Structures Shown**: Sliding Window, Z-Score, IntroSort
 
 ### 7. DSA Reference (`/dsa-info`)
-- **File**: `/frontend/src/pages/DSAInfo.jsx`
-- **Features**: Data structure documentation, viva questions
-
----
-
-## C++ Engine Details
-
-### Compilation
-```bash
-cd backend/cpp
-make          # Compile with optimizations
-make debug    # Compile with debug symbols
-make clean    # Remove compiled binary
-```
-
-### Input/Output Format
-The C++ engine communicates via JSON through stdin/stdout:
-
-**Input:**
-```json
-{
-  "command": "add_transaction",
-  "params": {
-    "type": "expense",
-    "amount": 100.00,
-    "category": "Food",
-    "description": "Lunch",
-    "date": "2025-07-15"
-  }
-}
-```
-
-**Output:**
-```json
-{
-  "success": true,
-  "transaction": {
-    "id": "txn_1234567890_1",
-    "type": "expense",
-    "amount": 100.00,
-    "category": "Food",
-    "description": "Lunch",
-    "date": "2025-07-15"
-  },
-  "canUndo": true
-}
-```
-
-### Supported Commands
-| Command | Description |
-|---------|-------------|
-| `add_transaction` | Add a new transaction |
-| `delete_transaction` | Delete transaction by ID |
-| `get_transactions` | Get all transactions (BST traversal) |
-| `get_recent_transactions` | Get recent N transactions (Stack) |
-| `get_transactions_by_date` | Get transactions in date range (BST) |
-| `set_budget` | Set/update category budget (HashMap) |
-| `get_budgets` | Get all budgets with spending |
-| `get_alerts` | Get budget alerts (>50% threshold) |
-| `add_bill` | Add bill to queue (Queue enqueue) |
-| `get_bills` | Get all bills in queue |
-| `pay_bill` | Mark bill as paid |
-| `delete_bill` | Remove bill from queue |
-| `get_top_expenses` | Get top K expenses (Heap) |
-| `get_top_categories` | Get top K categories (Category Heap) |
-| `get_monthly_summary` | Get month summary (BST range) |
-| `get_category_suggestions` | Autocomplete (Trie prefix) |
-| `get_all_categories` | Get all categories |
-| `undo` | Undo last action (Stack pop) |
-| `get_dashboard` | Get dashboard summary |
+- **Features**: Data structure documentation, time complexity, viva questions
+- **Data Structures Shown**: All 7 structures documented
 
 ---
 
@@ -577,53 +519,35 @@ The C++ engine communicates via JSON through stdin/stdout:
 │   ├── server.py               # FastAPI REST API server
 │   ├── requirements.txt        # Python dependencies
 │   ├── .env                    # Environment variables
-│   ├── cpp/
-│   │   ├── Makefile            # Build configuration
-│   │   ├── main.cpp            # Main executable entry point
-│   │   ├── finance_engine.h    # Engine integration layer
-│   │   ├── hashmap.h           # Hash Map implementation
-│   │   ├── linkedlist.h        # Doubly Linked List implementation
-│   │   ├── bst.h               # Binary Search Tree implementation
-│   │   ├── heap.h              # Max Heap implementations
-│   │   ├── queue.h             # Queue (FIFO) implementation
-│   │   ├── stack.h             # Stack (LIFO) implementations
-│   │   ├── trie.h              # Trie implementation
-│   │   ├── finance_engine      # Compiled binary (Linux/Mac)
-│   │   └── finance_engine.exe  # Compiled binary (Windows)
+│   ├── database/
+│   │   ├── __init__.py         # Database module
+│   │   ├── db_manager.py       # SQLite operations with DSA implementations
+│   │   ├── schema.sql          # Database schema definition
+│   │   └── migrate_json_to_sqlite.py  # Migration script
 │   └── data/
-│       ├── transactions.json   # Transaction data
-│       ├── budgets.json        # Budget data
-│       ├── bills.json          # Bill data
-│       └── undo_stack.json     # Undo history
+│       └── finance.db          # SQLite database file
 ├── frontend/
 │   ├── package.json            # Node.js dependencies
 │   ├── yarn.lock               # Dependency lock file
 │   ├── .env                    # Frontend environment variables
 │   ├── tailwind.config.js      # Tailwind CSS configuration
-│   ├── postcss.config.js       # PostCSS configuration
-│   ├── craco.config.js         # CRACO configuration
 │   ├── public/
 │   │   └── index.html          # HTML entry point
 │   └── src/
 │       ├── index.js            # React entry point
-│       ├── index.css           # Global styles
+│       ├── index.css           # Global styles with DSA badges
 │       ├── App.js              # Main App component
-│       ├── App.css             # App-specific styles
 │       ├── components/
 │       │   ├── Sidebar.jsx     # Navigation sidebar
 │       │   └── ui/             # shadcn/ui components
-│       ├── pages/
-│       │   ├── Dashboard.jsx   # Dashboard page
-│       │   ├── AddTransaction.jsx
-│       │   ├── Transactions.jsx
-│       │   ├── Budgets.jsx
-│       │   ├── Bills.jsx
-│       │   ├── Analytics.jsx
-│       │   └── DSAInfo.jsx     # DSA reference page
-│       ├── hooks/
-│       │   └── use-toast.js    # Toast notification hook
-│       └── lib/
-│           └── utils.js        # Utility functions
+│       └── pages/
+│           ├── Dashboard.jsx   # Dashboard with trends & anomalies
+│           ├── AddTransaction.jsx
+│           ├── Transactions.jsx
+│           ├── Budgets.jsx
+│           ├── Bills.jsx
+│           ├── Analytics.jsx   # Trends & anomaly analysis
+│           └── DSAInfo.jsx     # DSA reference page
 └── test_result.md              # Testing results and protocol
 ```
 
@@ -633,11 +557,11 @@ The C++ engine communicates via JSON through stdin/stdout:
 
 The application comes pre-loaded with demonstration data:
 
-### Sample Transactions (15 entries)
-- Income: Monthly salary ($5000), Freelance projects ($500), Dividends ($250)
-- Expenses: Rent, Groceries, Transport, Entertainment, Utilities, Healthcare, etc.
+### Sample Transactions
+- Income: Monthly salary, Freelance projects, Dividends
+- Expenses: Rent, Groceries, Transport, Entertainment, Utilities, Healthcare
 
-### Sample Budgets (6 categories)
+### Sample Budgets
 | Category | Budget Limit |
 |----------|-------------|
 | Groceries | $500 |
@@ -647,108 +571,58 @@ The application comes pre-loaded with demonstration data:
 | Utilities | $150 |
 | Transport | $200 |
 
-### Sample Bills (4 entries)
-- Internet Bill ($75) - Utilities
-- Phone Bill ($50) - Utilities
-- Gym Membership ($45) - Healthcare
-- Netflix Subscription ($15.99) - Entertainment
-
 ---
 
 ## Time Complexity Analysis
 
 | Operation | Time Complexity | Data Structure |
 |-----------|----------------|----------------|
-| Add Transaction | O(log n) | BST insert + O(1) HashMap update |
-| Delete Transaction | O(n) | Linked List search + BST delete |
-| Get All Transactions | O(n) | Linked List traversal or BST in-order |
-| Get Transactions by Date Range | O(log n + k) | BST range query |
-| Get Recent Transactions | O(k) | Stack top-k |
-| Set Budget | O(1) | HashMap insert/update |
-| Get Budget | O(1) | HashMap search |
-| Get All Budgets | O(n) | HashMap iteration |
+| Add Transaction | O(log n) | Red-Black Tree insert |
+| Get Transaction by ID | O(log n) expected | Skip List lookup |
+| Get Transactions by Date Range | O(log n + k) | Red-Black Tree range query |
+| Get Top K Expenses | O(n log n) | IntroSort |
+| Set/Get Budget | O(1) average | Polynomial Hash Map |
+| Get Budget Alerts (sorted) | O(n log n) | Indexed Priority Queue |
+| Get 7-Day Trend | O(7) = O(1) | Sliding Window |
+| Detect Anomaly | O(1) | Z-Score (Welford's) |
+| Update Spending Stats | O(1) | Z-Score (Welford's) |
 | Add Bill | O(1) | Queue enqueue |
 | Pay/Delete Bill | O(n) | Queue search |
-| Get Top K Expenses | O(k log n) | Max Heap extract k times |
-| Get Category Suggestions | O(m + k) | Trie prefix search |
 | Undo | O(1) | Stack pop |
 
 ---
 
 ## Viva Questions & Answers
 
-### Q1: Why did you choose a Hash Map for budget management?
-**A:** Hash Map provides O(1) average time for lookup, insert, and update operations. This is ideal for budget management where we need frequent category lookups. Unlike arrays or linked lists (O(n) search), HashMap allows instant access to any category's budget.
+### Q1: Why use a Red-Black Tree instead of a regular BST for transactions?
+**A:** Red-Black Tree provides guaranteed O(log n) operations even in worst case. Regular BST can degrade to O(n) with skewed data (e.g., transactions added chronologically). Red-Black Tree maintains balance through color constraints and rotations, ensuring consistent performance for our date-ordered transactions.
 
-### Q2: Why use a Doubly Linked List instead of an array for transactions?
-**A:** Doubly Linked List allows O(1) insertion at both ends and efficient bidirectional traversal. We can easily add new transactions at the front (most recent) and traverse backwards for history. Unlike arrays, we don't need to shift elements during deletion.
+### Q2: How does Skip List provide O(log n) expected time for ID lookups?
+**A:** Skip List creates multiple layers of linked lists with probabilistic level assignment. Each level skips over elements in lower levels, creating "express lanes". On average, searching skips log(n) elements at each level, giving O(log n) expected time. Unlike balanced trees, it's simpler to implement and has good cache performance.
 
-### Q3: How does BST help with date range queries?
-**A:** BST maintains transactions sorted by date, enabling O(log n + k) range queries where k is the result count. For date ranges, we traverse from start date to end date using in-order traversal, skipping irrelevant subtrees - much faster than O(n) linear search.
+### Q3: Why use an Indexed Priority Queue for budget alerts?
+**A:** Indexed Priority Queue allows both priority-based extraction AND efficient updates to existing priorities in O(log n). When budget spending changes, we need to update the alert priority without removing and re-inserting. Regular heaps don't support efficient updates. IPQ maintains an index map for O(1) lookup of positions.
 
-### Q4: Why Max Heap for top expenses instead of sorting?
-**A:** Max Heap allows us to extract top K expenses in O(k log n) time. Full sorting would take O(n log n). For finding top 5-10 expenses from thousands of transactions, heap is significantly faster. BuildHeap is also O(n) which is optimal.
+### Q4: How does Polynomial Hashing improve category lookups?
+**A:** Polynomial hashing creates hash values using the formula: h = (c₁×p^(n-1) + c₂×p^(n-2) + ... + cₙ) mod m. This produces better distribution than simple sum-of-characters, reducing collisions. For category names like "Food" vs "Doof", polynomial hashing produces different values, improving O(1) average lookup time.
 
-### Q5: Why Queue for bills instead of Stack?
-**A:** Bills follow FIFO order - bills added first should be paid first (based on due dates). Queue's FIFO behavior naturally represents this. Stack (LIFO) would pay newest bills first, which isn't practical for bill management.
+### Q5: Explain the Sliding Window algorithm for spending trends.
+**A:** Sliding Window maintains a fixed-size window over the data stream. For 7-day trends, we keep daily aggregates and slide the window each day. When adding new day: add new value, remove oldest. This gives O(1) per update instead of O(n) recalculation. We precompute daily spending totals to enable efficient window operations.
 
-### Q6: How does Stack enable undo functionality?
-**A:** Stack's LIFO property is perfect for undo - the last action is undone first. We push each action to stack, and pop to undo. This is the standard approach used in editors, browsers, and most software with undo functionality.
+### Q6: Why IntroSort instead of QuickSort for expense ranking?
+**A:** IntroSort combines QuickSort, HeapSort, and InsertionSort. It starts with QuickSort for its good average performance, but switches to HeapSort if recursion depth exceeds 2×log(n) - preventing O(n²) worst case. For small partitions, InsertionSort is used for its low overhead. SQLite uses this hybrid approach for ORDER BY.
 
-### Q7: What advantage does Trie provide for autocomplete?
-**A:** Trie enables O(m) prefix search where m is prefix length, regardless of total words. For autocomplete, this means instant suggestions as users type. Alternative approaches like filtering an array would be O(n*m) for n categories.
+### Q7: How does Z-Score anomaly detection work in real-time?
+**A:** Z-Score measures how many standard deviations a value is from the mean: Z = (x - μ) / σ. For streaming data, we use Welford's algorithm to compute running mean and variance in O(1) per update without storing all values. If |Z| > threshold (typically 2.0), we flag as anomaly. This enables real-time detection as transactions are added.
 
-### Q8: What would you change if you had millions of transactions?
-**A:** For scalability: 1) Use self-balancing BST (AVL/Red-Black) for guaranteed O(log n) operations, 2) Implement database indexing, 3) Add pagination for large results, 4) Consider B-trees for disk-based storage, 5) Use persistent heap structures.
+### Q8: What's the advantage of SQLite B-Tree over in-memory structures?
+**A:** SQLite B-Tree provides: 1) Persistence - data survives restarts, 2) Memory efficiency - only loads needed pages, 3) ACID compliance - transactions are reliable, 4) Concurrent access - multiple readers, one writer, 5) Built-in indexing - automatic B-Tree for primary keys. For financial data, persistence and reliability are critical.
 
-### Q9: How would you handle concurrent access?
-**A:** Add thread-safe mechanisms: 1) Mutex locks for write operations, 2) Read-write locks for better read performance, 3) Atomic operations where possible, 4) Transaction isolation for database operations.
+### Q9: How would you scale this system for millions of transactions?
+**A:** For scale: 1) Partition by date ranges (sharding), 2) Add read replicas for analytics queries, 3) Use materialized views for aggregates, 4) Implement connection pooling, 5) Add caching layer (Redis) for hot data, 6) Consider columnar storage for analytics. The current O(log n) operations scale well, but I/O becomes the bottleneck.
 
-### Q10: What's the space complexity of your implementation?
-**A:** O(n) for all structures where n is the data count. HashMap: O(n) for entries, DLL: O(n) for nodes, BST: O(n) for nodes, Heap: O(n) for array, Queue: O(n) for nodes, Stack: O(k) where k is undo limit, Trie: O(m*k) for m words of avg length k.
-
----
-
-## Environment Variables
-
-### Backend (`/backend/.env`)
-```env
-MONGO_URL=mongodb://localhost:27017
-```
-Note: This application uses JSON files for storage, not MongoDB.
-
-### Frontend (`/frontend/.env`)
-```env
-REACT_APP_BACKEND_URL=http://localhost:8001
-```
-
----
-
-## Testing
-
-Backend API testing is performed using curl commands or automated test scripts:
-
-```bash
-# Health check
-curl http://localhost:8001/api/health
-
-# Get dashboard
-curl http://localhost:8001/api/dashboard
-
-# Add transaction
-curl -X POST http://localhost:8001/api/transactions \
-  -H "Content-Type: application/json" \
-  -d '{"type":"expense","amount":50,"category":"Food","description":"Test"}'
-
-# Get top expenses
-curl http://localhost:8001/api/top-expenses?count=5
-```
-
----
-
-## License
-
-This project is developed for academic purposes as part of Data Structures & Applications Lab.
+### Q10: What's the space-time tradeoff in your anomaly detection?
+**A:** Using Welford's algorithm, we store only 3 values per category (count, mean, M2) for O(1) space per category, O(k) total for k categories. Traditional approach would store all values for O(n) space. Tradeoff: We can't recompute if a transaction is deleted (would need rebuild). Also, early transactions have less reliable statistics.
 
 ---
 
@@ -765,3 +639,4 @@ This project is developed for academic purposes as part of Data Structures & App
 - shadcn/ui for the beautiful React components
 - Tailwind CSS for the styling framework
 - FastAPI for the high-performance Python web framework
+- SQLite for the reliable embedded database

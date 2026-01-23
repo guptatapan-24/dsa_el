@@ -144,17 +144,18 @@ class FinanceTrackerTester:
         if response.status_code == 200:
             data = response.json()
             transactions = data.get("transactions", [])
-            self.log_test("Get All Transactions", True, f"Found {len(transactions)} transactions")
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get All Transactions", True, f"Found {len(transactions)} transactions. DSA: {ds_info}")
         else:
             self.log_test("Get All Transactions", False, f"HTTP {response.status_code}", response.text)
             return False
         
-        # Test POST /api/transactions
+        # Test POST /api/transactions (add new transaction)
         new_transaction = {
             "type": "expense",
-            "amount": 100.0,
-            "category": "Food",
-            "description": "Test lunch",
+            "amount": 125.50,
+            "category": "Groceries",
+            "description": "Weekly grocery shopping",
             "date": "2025-01-16"
         }
         
@@ -165,30 +166,34 @@ class FinanceTrackerTester:
         
         if response.status_code == 200:
             data = response.json()
-            if "transaction" in data and "id" in data["transaction"]:
+            if data.get("success") and "transaction" in data and "id" in data["transaction"]:
                 self.created_transaction_id = data["transaction"]["id"]
-                self.log_test("Add Transaction", True, f"Created transaction ID: {self.created_transaction_id}")
+                anomaly = data.get("anomaly")
+                ds_info = data.get("dsInfo", "")
+                self.log_test("Add Transaction", True, 
+                             f"Created transaction ID: {self.created_transaction_id}. Anomaly: {anomaly is not None}. DSA: {ds_info}")
             else:
-                self.log_test("Add Transaction", False, "No transaction ID returned", data)
+                self.log_test("Add Transaction", False, "Invalid response structure", data)
                 return False
         else:
             self.log_test("Add Transaction", False, f"HTTP {response.status_code}", response.text)
             return False
         
-        # Test GET /api/transactions/recent
+        # Test GET /api/transactions/recent?count=5
         response = self.make_request("GET", "/transactions/recent", params={"count": 5})
         if isinstance(response, tuple):
             self.log_test("Get Recent Transactions", False, f"Request failed: {response[1]}")
         elif response.status_code == 200:
             data = response.json()
             recent = data.get("transactions", [])
-            self.log_test("Get Recent Transactions", True, f"Found {len(recent)} recent transactions")
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get Recent Transactions", True, f"Found {len(recent)} recent transactions. DSA: {ds_info}")
         else:
             self.log_test("Get Recent Transactions", False, f"HTTP {response.status_code}", response.text)
         
-        # Test GET /api/transactions/range
+        # Test GET /api/transactions/range?start_date=2025-01-01&end_date=2025-12-31
         start_date = "2025-01-01"
-        end_date = "2025-01-31"
+        end_date = "2025-12-31"
         response = self.make_request("GET", "/transactions/range", 
                                    params={"start_date": start_date, "end_date": end_date})
         if isinstance(response, tuple):
@@ -196,18 +201,39 @@ class FinanceTrackerTester:
         elif response.status_code == 200:
             data = response.json()
             range_transactions = data.get("transactions", [])
+            ds_info = data.get("dsInfo", "")
             self.log_test("Get Transactions by Range", True, 
-                         f"Found {len(range_transactions)} transactions in range {start_date} to {end_date}")
+                         f"Found {len(range_transactions)} transactions in range {start_date} to {end_date}. DSA: {ds_info}")
         else:
             self.log_test("Get Transactions by Range", False, f"HTTP {response.status_code}", response.text)
         
-        # Test DELETE /api/transactions/{id} (if we have a transaction ID)
+        # Test GET /api/transactions/{transaction_id} (get by ID)
+        if self.created_transaction_id:
+            response = self.make_request("GET", f"/transactions/{self.created_transaction_id}")
+            if isinstance(response, tuple):
+                self.log_test("Get Transaction by ID", False, f"Request failed: {response[1]}")
+            elif response.status_code == 200:
+                data = response.json()
+                transaction = data.get("transaction")
+                ds_info = data.get("dsInfo", "")
+                if transaction and transaction.get("id") == self.created_transaction_id:
+                    self.log_test("Get Transaction by ID", True, f"Retrieved transaction {self.created_transaction_id}. DSA: {ds_info}")
+                else:
+                    self.log_test("Get Transaction by ID", False, "Transaction ID mismatch", data)
+            else:
+                self.log_test("Get Transaction by ID", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test DELETE /api/transactions/{transaction_id}
         if self.created_transaction_id:
             response = self.make_request("DELETE", f"/transactions/{self.created_transaction_id}")
             if isinstance(response, tuple):
                 self.log_test("Delete Transaction", False, f"Request failed: {response[1]}")
             elif response.status_code == 200:
-                self.log_test("Delete Transaction", True, f"Deleted transaction {self.created_transaction_id}")
+                data = response.json()
+                if data.get("success"):
+                    self.log_test("Delete Transaction", True, f"Deleted transaction {self.created_transaction_id}")
+                else:
+                    self.log_test("Delete Transaction", False, "Delete operation failed", data)
             else:
                 self.log_test("Delete Transaction", False, f"HTTP {response.status_code}", response.text)
         

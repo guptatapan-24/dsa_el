@@ -252,11 +252,11 @@ class DatabaseManager:
         
         budgets = []
         for row in rows:
-            percent = (row['spent'] / row['limit'] * 100) if row['limit'] > 0 else 0
+            percent = (row['spent'] / row['budget_limit'] * 100) if row['budget_limit'] > 0 else 0
             alert_level = 'exceeded' if percent >= 100 else 'warning' if percent >= 80 else 'caution' if percent >= 50 else 'normal'
             budgets.append({
                 'category': row['category'],
-                'limit': row['limit'],
+                'limit': row['budget_limit'],
                 'spent': row['spent'],
                 'percentUsed': round(percent, 2),
                 'alertLevel': alert_level

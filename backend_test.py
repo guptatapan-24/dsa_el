@@ -317,16 +317,17 @@ class FinanceTrackerTester:
         if response.status_code == 200:
             data = response.json()
             bills = data.get("bills", [])
-            self.log_test("Get All Bills", True, f"Found {len(bills)} bills")
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get All Bills", True, f"Found {len(bills)} bills. DSA: {ds_info}")
         else:
             self.log_test("Get All Bills", False, f"HTTP {response.status_code}", response.text)
             return False
         
-        # Test POST /api/bills
+        # Test POST /api/bills (add bill)
         new_bill = {
-            "name": "Test Bill",
-            "amount": 50.0,
-            "dueDate": "2025-01-30",
+            "name": "Internet Bill",
+            "amount": 89.99,
+            "dueDate": "2025-02-15",
             "category": "Utilities"
         }
         
@@ -337,33 +338,41 @@ class FinanceTrackerTester:
         
         if response.status_code == 200:
             data = response.json()
-            if "bill" in data and "id" in data["bill"]:
+            if data.get("success") and "bill" in data and "id" in data["bill"]:
                 self.created_bill_id = data["bill"]["id"]
-                self.log_test("Add Bill", True, f"Created bill ID: {self.created_bill_id}")
+                self.log_test("Add Bill", True, f"Created bill ID: {self.created_bill_id} - {new_bill['name']}")
             else:
-                self.log_test("Add Bill", False, "No bill ID returned", data)
+                self.log_test("Add Bill", False, "Invalid response structure", data)
                 return False
         else:
             self.log_test("Add Bill", False, f"HTTP {response.status_code}", response.text)
             return False
         
-        # Test POST /api/bills/{id}/pay (if we have a bill ID)
+        # Test POST /api/bills/{bill_id}/pay (mark paid)
         if self.created_bill_id:
             response = self.make_request("POST", f"/bills/{self.created_bill_id}/pay")
             if isinstance(response, tuple):
                 self.log_test("Pay Bill", False, f"Request failed: {response[1]}")
             elif response.status_code == 200:
-                self.log_test("Pay Bill", True, f"Paid bill {self.created_bill_id}")
+                data = response.json()
+                if data.get("success"):
+                    self.log_test("Pay Bill", True, f"Paid bill {self.created_bill_id}")
+                else:
+                    self.log_test("Pay Bill", False, "Pay operation failed", data)
             else:
                 self.log_test("Pay Bill", False, f"HTTP {response.status_code}", response.text)
         
-        # Test DELETE /api/bills/{id} (if we have a bill ID)
+        # Test DELETE /api/bills/{bill_id}
         if self.created_bill_id:
             response = self.make_request("DELETE", f"/bills/{self.created_bill_id}")
             if isinstance(response, tuple):
                 self.log_test("Delete Bill", False, f"Request failed: {response[1]}")
             elif response.status_code == 200:
-                self.log_test("Delete Bill", True, f"Deleted bill {self.created_bill_id}")
+                data = response.json()
+                if data.get("success"):
+                    self.log_test("Delete Bill", True, f"Deleted bill {self.created_bill_id}")
+                else:
+                    self.log_test("Delete Bill", False, "Delete operation failed", data)
             else:
                 self.log_test("Delete Bill", False, f"HTTP {response.status_code}", response.text)
         

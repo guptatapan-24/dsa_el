@@ -193,6 +193,43 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {/* 7-Day Spending Trend (Sliding Window) */}
+      {trend7Day && (
+        <Card className="mb-8 card-hover" data-testid="spending-trend-card">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" />
+                7-Day Spending Trend
+              </CardTitle>
+              <span className="ds-badge ds-badge-window mt-1">Sliding Window</span>
+            </div>
+            <Badge variant={trend7Day.trend === 'increasing' ? 'destructive' : trend7Day.trend === 'decreasing' ? 'success' : 'secondary'}>
+              {trend7Day.trend === 'increasing' ? '↑ Increasing' : trend7Day.trend === 'decreasing' ? '↓ Decreasing' : '→ Stable'}
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="p-4 bg-slate-50 rounded-lg text-center">
+                <p className="text-sm text-slate-500">Total Expenses</p>
+                <p className="text-xl font-bold expense-text">{formatCurrency(trend7Day.totalExpenses)}</p>
+              </div>
+              <div className="p-4 bg-emerald-50 rounded-lg text-center">
+                <p className="text-sm text-emerald-600">Total Income</p>
+                <p className="text-xl font-bold income-text">{formatCurrency(trend7Day.totalIncome)}</p>
+              </div>
+              <div className="p-4 bg-primary/5 rounded-lg text-center">
+                <p className="text-sm text-primary">Avg Daily Expense</p>
+                <p className="text-xl font-bold text-primary">{formatCurrency(trend7Day.avgDailyExpense)}</p>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 text-center">
+              Period: {trend7Day.startDate} to {trend7Day.endDate}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Two Column Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Recent Transactions (Stack) */}

@@ -443,7 +443,106 @@ class FinanceTrackerTester:
         
         return True
     
-    def test_autocomplete_endpoints(self):
+    def test_spending_trends_endpoints(self):
+        """Test spending trends (sliding window) endpoints"""
+        print("🔍 Testing Spending Trends Endpoints...")
+        
+        # Test GET /api/trends/7-day
+        response = self.make_request("GET", "/trends/7-day")
+        if isinstance(response, tuple):
+            self.log_test("Get 7-Day Trend", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            trend = data.get("trend")
+            ds_info = data.get("dsInfo", "")
+            if trend:
+                period = trend.get("period", "unknown")
+                total_expenses = trend.get("totalExpenses", 0)
+                avg_daily = trend.get("avgDailyExpense", 0)
+                self.log_test("Get 7-Day Trend", True, 
+                             f"Period: {period}, Total: ${total_expenses:.2f}, Avg Daily: ${avg_daily:.2f}. DSA: {ds_info}")
+            else:
+                self.log_test("Get 7-Day Trend", False, "No trend data", data)
+        else:
+            self.log_test("Get 7-Day Trend", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test GET /api/trends/30-day
+        response = self.make_request("GET", "/trends/30-day")
+        if isinstance(response, tuple):
+            self.log_test("Get 30-Day Trend", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            trend = data.get("trend")
+            ds_info = data.get("dsInfo", "")
+            if trend:
+                period = trend.get("period", "unknown")
+                total_expenses = trend.get("totalExpenses", 0)
+                avg_daily = trend.get("avgDailyExpense", 0)
+                self.log_test("Get 30-Day Trend", True, 
+                             f"Period: {period}, Total: ${total_expenses:.2f}, Avg Daily: ${avg_daily:.2f}. DSA: {ds_info}")
+            else:
+                self.log_test("Get 30-Day Trend", False, "No trend data", data)
+        else:
+            self.log_test("Get 30-Day Trend", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test GET /api/trends/14 (custom days)
+        response = self.make_request("GET", "/trends/14")
+        if isinstance(response, tuple):
+            self.log_test("Get Custom 14-Day Trend", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            trend = data.get("trend")
+            ds_info = data.get("dsInfo", "")
+            if trend:
+                period = trend.get("period", "unknown")
+                self.log_test("Get Custom 14-Day Trend", True, f"Period: {period}. DSA: {ds_info}")
+            else:
+                self.log_test("Get Custom 14-Day Trend", False, "No trend data", data)
+        else:
+            self.log_test("Get Custom 14-Day Trend", False, f"HTTP {response.status_code}", response.text)
+        
+        return True
+    
+    def test_anomaly_detection_endpoints(self):
+        """Test anomaly detection (Z-Score) endpoints"""
+        print("🔍 Testing Anomaly Detection Endpoints...")
+        
+        # Test GET /api/anomalies?threshold=2.0
+        response = self.make_request("GET", "/anomalies", params={"threshold": 2.0})
+        if isinstance(response, tuple):
+            self.log_test("Get Anomalies", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            anomalies = data.get("anomalies", [])
+            threshold = data.get("threshold", 0)
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get Anomalies", True, 
+                         f"Found {len(anomalies)} anomalies with threshold {threshold}. DSA: {ds_info}")
+        else:
+            self.log_test("Get Anomalies", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test POST /api/anomalies/check?category=Food&amount=500&threshold=2.0
+        response = self.make_request("POST", "/anomalies/check", 
+                                   params={"category": "Food", "amount": 500, "threshold": 2.0})
+        if isinstance(response, tuple):
+            self.log_test("Check Anomaly", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            result = data.get("result")
+            ds_info = data.get("dsInfo", "")
+            if result:
+                is_anomaly = result.get("isAnomaly", False)
+                z_score = result.get("zScore", 0)
+                category = result.get("category", "unknown")
+                amount = result.get("amount", 0)
+                self.log_test("Check Anomaly", True, 
+                             f"Category: {category}, Amount: ${amount}, Anomaly: {is_anomaly}, Z-Score: {z_score:.2f}. DSA: {ds_info}")
+            else:
+                self.log_test("Check Anomaly", False, "No result data", data)
+        else:
+            self.log_test("Check Anomaly", False, f"HTTP {response.status_code}", response.text)
+        
+        return True
         """Test autocomplete and category endpoints"""
         print("🔍 Testing Autocomplete Endpoints...")
         

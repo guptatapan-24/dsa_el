@@ -271,28 +271,28 @@ export default function DSAInfo() {
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
           <div className="p-3 bg-white rounded shadow-sm">
-            <Badge className="bg-blue-500 mb-2">Hash Map</Badge>
-            <p className="text-slate-600">Use for: Key-value mapping, O(1) lookups</p>
+            <Badge className="bg-red-500 mb-2">Red-Black Tree</Badge>
+            <p className="text-slate-600">Use for: Ordered data, O(log n) guaranteed operations</p>
           </div>
           <div className="p-3 bg-white rounded shadow-sm">
-            <Badge className="bg-green-500 mb-2">Linked List</Badge>
-            <p className="text-slate-600">Use for: Sequential data, frequent inserts/deletes</p>
+            <Badge className="bg-green-500 mb-2">Skip List</Badge>
+            <p className="text-slate-600">Use for: Fast lookups with simpler implementation</p>
           </div>
           <div className="p-3 bg-white rounded shadow-sm">
-            <Badge className="bg-purple-500 mb-2">BST</Badge>
-            <p className="text-slate-600">Use for: Sorted data, range queries</p>
+            <Badge className="bg-purple-500 mb-2">Indexed Priority Queue</Badge>
+            <p className="text-slate-600">Use for: Priority with efficient updates</p>
           </div>
           <div className="p-3 bg-white rounded shadow-sm">
-            <Badge className="bg-orange-500 mb-2">Heap</Badge>
-            <p className="text-slate-600">Use for: Priority queues, top-K elements</p>
+            <Badge className="bg-blue-500 mb-2">Polynomial Hash Map</Badge>
+            <p className="text-slate-600">Use for: O(1) lookups with good distribution</p>
           </div>
           <div className="p-3 bg-white rounded shadow-sm">
-            <Badge className="bg-cyan-500 mb-2">Queue</Badge>
-            <p className="text-slate-600">Use for: FIFO operations, scheduling</p>
+            <Badge className="bg-cyan-500 mb-2">Sliding Window</Badge>
+            <p className="text-slate-600">Use for: Fixed-size aggregate calculations</p>
           </div>
           <div className="p-3 bg-white rounded shadow-sm">
-            <Badge className="bg-pink-500 mb-2">Stack</Badge>
-            <p className="text-slate-600">Use for: LIFO operations, undo/redo</p>
+            <Badge className="bg-orange-500 mb-2">IntroSort</Badge>
+            <p className="text-slate-600">Use for: Guaranteed O(n log n) sorting</p>
           </div>
         </div>
       </div>

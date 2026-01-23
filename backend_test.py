@@ -599,12 +599,25 @@ class FinanceTrackerTester:
             data = response.json()
             data_structures = data.get("dataStructures", [])
             complexity = data.get("complexity", {})
+            database = data.get("database", {})
             
-            if len(data_structures) >= 7 and complexity:
-                self.log_test("DSA Info", True, f"Found {len(data_structures)} data structures with complexity info")
+            if len(data_structures) >= 7 and complexity and database:
+                # Check for specific data structures
+                ds_names = [ds.get("name", "") for ds in data_structures]
+                expected_structures = ["Red-Black Tree", "Skip List", "Indexed Priority Queue", 
+                                     "Polynomial Hash Map", "Sliding Window", "IntroSort", 
+                                     "Z-Score Anomaly Detection"]
+                
+                found_structures = [name for name in expected_structures if name in ds_names]
+                
+                self.log_test("DSA Info", True, 
+                             f"Found {len(data_structures)} data structures ({len(found_structures)}/{len(expected_structures)} expected), "
+                             f"complexity info for {len(complexity)} operations, database: {database.get('type', 'unknown')}")
                 return True
             else:
-                self.log_test("DSA Info", False, "Incomplete DSA information", data)
+                self.log_test("DSA Info", False, 
+                             f"Incomplete DSA info - structures: {len(data_structures)}, complexity: {len(complexity)}, database: {bool(database)}", 
+                             data)
                 return False
         else:
             self.log_test("DSA Info", False, f"HTTP {response.status_code}", response.text)

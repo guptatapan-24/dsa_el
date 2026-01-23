@@ -382,37 +382,64 @@ class FinanceTrackerTester:
         """Test all analytics endpoints"""
         print("🔍 Testing Analytics Endpoints...")
         
-        # Test GET /api/analytics/top-expenses
-        response = self.make_request("GET", "/analytics/top-expenses", params={"count": 5})
+        # Test GET /api/top-expenses?count=5
+        response = self.make_request("GET", "/top-expenses", params={"count": 5})
         if isinstance(response, tuple):
             self.log_test("Get Top Expenses", False, f"Request failed: {response[1]}")
         elif response.status_code == 200:
             data = response.json()
-            expenses = data.get("expenses", [])
-            self.log_test("Get Top Expenses", True, f"Found {len(expenses)} top expenses")
+            expenses = data.get("topExpenses", [])
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get Top Expenses", True, f"Found {len(expenses)} top expenses. DSA: {ds_info}")
         else:
             self.log_test("Get Top Expenses", False, f"HTTP {response.status_code}", response.text)
         
-        # Test GET /api/analytics/top-categories
-        response = self.make_request("GET", "/analytics/top-categories", params={"count": 5})
+        # Test GET /api/top-categories?count=5
+        response = self.make_request("GET", "/top-categories", params={"count": 5})
         if isinstance(response, tuple):
             self.log_test("Get Top Categories", False, f"Request failed: {response[1]}")
         elif response.status_code == 200:
             data = response.json()
-            categories = data.get("categories", [])
-            self.log_test("Get Top Categories", True, f"Found {len(categories)} top categories")
+            categories = data.get("topCategories", [])
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Get Top Categories", True, f"Found {len(categories)} top categories. DSA: {ds_info}")
         else:
             self.log_test("Get Top Categories", False, f"HTTP {response.status_code}", response.text)
         
-        # Test GET /api/analytics/monthly-summary
-        response = self.make_request("GET", "/analytics/monthly-summary", params={"month": "2025-01"})
+        # Test GET /api/monthly-summary
+        response = self.make_request("GET", "/monthly-summary")
         if isinstance(response, tuple):
-            self.log_test("Get Monthly Summary", False, f"Request failed: {response[1]}")
+            self.log_test("Get Monthly Summary (current)", False, f"Request failed: {response[1]}")
         elif response.status_code == 200:
             data = response.json()
-            self.log_test("Get Monthly Summary", True, "Monthly summary retrieved successfully")
+            summary = data.get("summary")
+            ds_info = data.get("dsInfo", "")
+            if summary:
+                month = summary.get("month", "unknown")
+                income = summary.get("totalIncome", 0)
+                expenses = summary.get("totalExpenses", 0)
+                self.log_test("Get Monthly Summary (current)", True, 
+                             f"Month: {month}, Income: ${income:.2f}, Expenses: ${expenses:.2f}. DSA: {ds_info}")
+            else:
+                self.log_test("Get Monthly Summary (current)", False, "No summary data", data)
         else:
-            self.log_test("Get Monthly Summary", False, f"HTTP {response.status_code}", response.text)
+            self.log_test("Get Monthly Summary (current)", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test GET /api/monthly-summary?month=2025-07
+        response = self.make_request("GET", "/monthly-summary", params={"month": "2025-07"})
+        if isinstance(response, tuple):
+            self.log_test("Get Monthly Summary (specific)", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            summary = data.get("summary")
+            ds_info = data.get("dsInfo", "")
+            if summary:
+                month = summary.get("month", "unknown")
+                self.log_test("Get Monthly Summary (specific)", True, f"Retrieved summary for {month}. DSA: {ds_info}")
+            else:
+                self.log_test("Get Monthly Summary (specific)", False, "No summary data for July 2025", data)
+        else:
+            self.log_test("Get Monthly Summary (specific)", False, f"HTTP {response.status_code}", response.text)
         
         return True
     

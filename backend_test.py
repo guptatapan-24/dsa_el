@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 """
 Backend API Testing for Smart Personal Finance Tracker
-Tests all FastAPI endpoints with C++ DSA engine integration
+Comprehensive testing of ALL FastAPI endpoints with SQLite & DSA integration
 """
 
 import requests
 import json
 import sys
+import os
 from datetime import datetime, timedelta
-import time
+from pathlib import Path
 
-# Backend URL from frontend/.env
-BACKEND_URL = "https://endpoint-doctor-1.preview.emergentagent.com/api"
+# Read backend URL from frontend/.env
+def get_backend_url():
+    env_path = Path(__file__).parent / "frontend" / ".env"
+    if env_path.exists():
+        with open(env_path, 'r') as f:
+            for line in f:
+                if line.startswith('REACT_APP_BACKEND_URL='):
+                    return line.split('=', 1)[1].strip() + "/api"
+    return "http://localhost:8001/api"
+
+BACKEND_URL = get_backend_url()
 
 class FinanceTrackerTester:
     def __init__(self):

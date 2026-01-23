@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Select,
   SelectContent,
@@ -17,6 +18,9 @@ import {
   TrendingDown,
   Calendar as CalendarIcon,
   PieChart,
+  Activity,
+  Zap,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -34,23 +38,34 @@ export default function Analytics() {
   );
   const [dateRange, setDateRange] = useState({ from: null, to: null });
   const [rangeTransactions, setRangeTransactions] = useState([]);
+  const [trend7Day, setTrend7Day] = useState(null);
+  const [trend30Day, setTrend30Day] = useState(null);
+  const [anomalies, setAnomalies] = useState([]);
 
   const fetchData = async () => {
     try {
-      const [topExpRes, topCatRes, summaryRes] = await Promise.all([
-      fetch(`${API}/top-expenses?count=10`),
-      fetch(`${API}/top-categories?count=10`),
-      fetch(`${API}/monthly-summary?month=${selectedMonth}`)
-
+      const [topExpRes, topCatRes, summaryRes, trend7Res, trend30Res, anomalyRes] = await Promise.all([
+        fetch(`${API}/top-expenses?count=10`),
+        fetch(`${API}/top-categories?count=10`),
+        fetch(`${API}/monthly-summary?month=${selectedMonth}`),
+        fetch(`${API}/trends/7-day`),
+        fetch(`${API}/trends/30-day`),
+        fetch(`${API}/anomalies?threshold=2.0`)
       ]);
 
       const topExpData = await topExpRes.json();
       const topCatData = await topCatRes.json();
       const summaryData = await summaryRes.json();
+      const trend7Data = await trend7Res.json();
+      const trend30Data = await trend30Res.json();
+      const anomalyData = await anomalyRes.json();
 
       setTopExpenses(topExpData.topExpenses || []);
       setTopCategories(topCatData.topCategories || []);
       setMonthlySummary(summaryData.summary || null);
+      setTrend7Day(trend7Data.trend || null);
+      setTrend30Day(trend30Data.trend || null);
+      setAnomalies(anomalyData.anomalies || []);
     } catch (error) {
       console.error("Failed to fetch analytics:", error);
       toast.error("Failed to load analytics");

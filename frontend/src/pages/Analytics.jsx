@@ -477,16 +477,16 @@ export default function Analytics() {
 
       {/* Two Column Layout for Top Insights */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Top Expenses (Heap) */}
+        {/* Top Expenses (IntroSort) */}
         <Card data-testid="top-expenses-analytics">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingDown className="w-5 h-5 text-red-500" />
               Top 10 Expenses
-              <span className="ds-badge ds-badge-heap">Max Heap</span>
+              <span className="ds-badge ds-badge-sort">IntroSort O(n log n)</span>
             </CardTitle>
             <CardDescription>
-              Highest expenses extracted using Max Heap (extractMax O(log n))
+              Highest expenses sorted using IntroSort algorithm (guaranteed O(n log n))
             </CardDescription>
           </CardHeader>
           <CardContent>

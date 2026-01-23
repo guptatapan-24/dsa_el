@@ -242,7 +242,7 @@ class DatabaseManager:
     def get_all_budgets(self) -> List[Dict]:
         """Get all budgets with spending status"""
         rows = self.fetch_all(
-            """SELECT c.name as category, b.budget_limit as limit,
+            """SELECT c.name as category, b.budget_limit as budget_limit,
                       COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as spent
                FROM budgets b
                JOIN categories c ON b.category_id = c.id

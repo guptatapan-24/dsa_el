@@ -8,7 +8,8 @@ import {
   Wallet,
   AlertTriangle,
   Receipt,
-  Calendar,
+  Activity,
+  Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 const API =
@@ -20,27 +21,34 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState([]);
   const [recentTx, setRecentTx] = useState([]);
   const [topExpenses, setTopExpenses] = useState([]);
+  const [trend7Day, setTrend7Day] = useState(null);
+  const [anomalies, setAnomalies] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [dashRes, alertRes, recentRes, topRes] = await Promise.all([
+      const [dashRes, alertRes, recentRes, topRes, trendRes, anomalyRes] = await Promise.all([
         fetch(`${API}/dashboard`),
         fetch(`${API}/budgets/alerts`),
         fetch(`${API}/transactions/recent?count=5`),
-        fetch(`${API}/top-expenses?count=5`)
-
+        fetch(`${API}/top-expenses?count=5`),
+        fetch(`${API}/trends/7-day`),
+        fetch(`${API}/anomalies?threshold=2.0`)
       ]);
 
       const dashData = await dashRes.json();
       const alertData = await alertRes.json();
       const recentData = await recentRes.json();
       const topData = await topRes.json();
+      const trendData = await trendRes.json();
+      const anomalyData = await anomalyRes.json();
 
       setDashboard(dashData);
       setAlerts(alertData.alerts || []);
       setRecentTx(recentData.transactions || []);
       setTopExpenses(topData.topExpenses || []);
+      setTrend7Day(trendData.trend || null);
+      setAnomalies(anomalyData.anomalies || []);
     } catch (error) {
       console.error("Failed to fetch dashboard:", error);
     } finally {

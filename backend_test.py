@@ -543,8 +543,35 @@ class FinanceTrackerTester:
             self.log_test("Check Anomaly", False, f"HTTP {response.status_code}", response.text)
         
         return True
+    def test_autocomplete_endpoints(self):
         """Test autocomplete and category endpoints"""
         print("🔍 Testing Autocomplete Endpoints...")
+        
+        # Test GET /api/categories/suggest?prefix=F
+        response = self.make_request("GET", "/categories/suggest", params={"prefix": "F"})
+        if isinstance(response, tuple):
+            self.log_test("Category Autocomplete with Prefix", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            suggestions = data.get("suggestions", [])
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Category Autocomplete with Prefix", True, 
+                         f"Found {len(suggestions)} suggestions for prefix 'F'. DSA: {ds_info}")
+        else:
+            self.log_test("Category Autocomplete with Prefix", False, f"HTTP {response.status_code}", response.text)
+        
+        # Test GET /api/categories/suggest (no prefix)
+        response = self.make_request("GET", "/categories/suggest")
+        if isinstance(response, tuple):
+            self.log_test("Category Autocomplete (no prefix)", False, f"Request failed: {response[1]}")
+        elif response.status_code == 200:
+            data = response.json()
+            suggestions = data.get("suggestions", [])
+            ds_info = data.get("dsInfo", "")
+            self.log_test("Category Autocomplete (no prefix)", True, 
+                         f"Found {len(suggestions)} suggestions (all categories). DSA: {ds_info}")
+        else:
+            self.log_test("Category Autocomplete (no prefix)", False, f"HTTP {response.status_code}", response.text)
         
         # Test GET /api/categories
         response = self.make_request("GET", "/categories")
@@ -556,17 +583,6 @@ class FinanceTrackerTester:
             self.log_test("Get All Categories", True, f"Found {len(categories)} categories")
         else:
             self.log_test("Get All Categories", False, f"HTTP {response.status_code}", response.text)
-        
-        # Test GET /api/categories/suggest
-        response = self.make_request("GET", "/categories/suggest", params={"prefix": "Fo"})
-        if isinstance(response, tuple):
-            self.log_test("Category Autocomplete", False, f"Request failed: {response[1]}")
-        elif response.status_code == 200:
-            data = response.json()
-            suggestions = data.get("suggestions", [])
-            self.log_test("Category Autocomplete", True, f"Found {len(suggestions)} suggestions for 'Fo'")
-        else:
-            self.log_test("Category Autocomplete", False, f"HTTP {response.status_code}", response.text)
         
         return True
     

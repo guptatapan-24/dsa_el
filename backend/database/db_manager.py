@@ -218,7 +218,7 @@ class DatabaseManager:
     def get_budget(self, category: str) -> Optional[Dict]:
         """Get budget status for a category"""
         row = self.fetch_one(
-            """SELECT b.id, c.name as category, b.budget_limit as limit,
+            """SELECT b.id, c.name as category, b.budget_limit as budget_limit,
                       COALESCE(SUM(CASE WHEN t.type = 'expense' THEN t.amount ELSE 0 END), 0) as spent
                FROM budgets b
                JOIN categories c ON b.category_id = c.id
@@ -228,11 +228,11 @@ class DatabaseManager:
             (category,)
         )
         if row:
-            percent = (row['spent'] / row['limit'] * 100) if row['limit'] > 0 else 0
+            percent = (row['spent'] / row['budget_limit'] * 100) if row['budget_limit'] > 0 else 0
             alert_level = 'exceeded' if percent >= 100 else 'warning' if percent >= 80 else 'caution' if percent >= 50 else 'normal'
             return {
                 'category': row['category'],
-                'limit': row['limit'],
+                'limit': row['budget_limit'],
                 'spent': row['spent'],
                 'percentUsed': round(percent, 2),
                 'alertLevel': alert_level

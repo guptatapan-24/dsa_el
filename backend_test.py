@@ -668,48 +668,81 @@ class FinanceTrackerTester:
     
     def run_all_tests(self):
         """Run all backend API tests"""
-        print("🚀 Starting Smart Personal Finance Tracker Backend API Tests")
+        print("🚀 Starting COMPREHENSIVE Smart Personal Finance Tracker Backend API Tests")
         print(f"🌐 Backend URL: {self.base_url}")
         print("=" * 80)
         
-        # Test in logical order
+        # Test in logical order - all endpoints from the review request
         tests = [
-            self.test_health_endpoint,
-            self.test_dashboard_endpoint,
-            self.test_transactions_endpoints,
-            self.test_budgets_endpoints,
-            self.test_bills_endpoints,
-            self.test_analytics_endpoints,
-            self.test_autocomplete_endpoints,
-            self.test_dsa_info_endpoint,
-            self.test_undo_endpoint
+            ("Root & Health", self.test_root_and_health),
+            ("Dashboard", self.test_dashboard_endpoint),
+            ("Transactions CRUD", self.test_transactions_endpoints),
+            ("Budgets", self.test_budgets_endpoints),
+            ("Bills", self.test_bills_endpoints),
+            ("Analytics", self.test_analytics_endpoints),
+            ("Spending Trends", self.test_spending_trends_endpoints),
+            ("Anomaly Detection", self.test_anomaly_detection_endpoints),
+            ("Autocomplete", self.test_autocomplete_endpoints),
+            ("Undo", self.test_undo_endpoint),
+            ("DSA Info", self.test_dsa_info_endpoint)
         ]
         
         total_tests = 0
         passed_tests = 0
+        failed_tests = []
         
-        for test_func in tests:
+        for test_group_name, test_func in tests:
+            print(f"\n📋 Running {test_group_name} Tests...")
             try:
-                test_func()
-                # Count individual test results
-                for result in self.test_results:
-                    total_tests += 1
-                    if result["success"]:
-                        passed_tests += 1
-                # Clear results for next test group
+                # Clear previous results
                 self.test_results = []
+                
+                # Run the test
+                test_func()
+                
+                # Count results for this group
+                group_total = len(self.test_results)
+                group_passed = sum(1 for result in self.test_results if result["success"])
+                group_failed = group_total - group_passed
+                
+                total_tests += group_total
+                passed_tests += group_passed
+                
+                # Track failed tests
+                for result in self.test_results:
+                    if not result["success"]:
+                        failed_tests.append({
+                            "group": test_group_name,
+                            "test": result["test"],
+                            "details": result["details"],
+                            "response": result.get("response")
+                        })
+                
+                print(f"   {test_group_name}: {group_passed}/{group_total} passed")
+                
             except Exception as e:
-                print(f"❌ CRITICAL ERROR in {test_func.__name__}: {str(e)}")
+                print(f"❌ CRITICAL ERROR in {test_group_name}: {str(e)}")
                 total_tests += 1
+                failed_tests.append({
+                    "group": test_group_name,
+                    "test": "Critical Error",
+                    "details": str(e),
+                    "response": None
+                })
         
-        print("=" * 80)
+        print("\n" + "=" * 80)
         print(f"📊 FINAL RESULTS: {passed_tests}/{total_tests} tests passed")
         
+        if failed_tests:
+            print(f"\n❌ FAILED TESTS ({len(failed_tests)}):")
+            for failure in failed_tests:
+                print(f"   • {failure['group']} - {failure['test']}: {failure['details']}")
+        
         if passed_tests == total_tests:
-            print("🎉 ALL TESTS PASSED! Backend API is working correctly.")
+            print("\n🎉 ALL TESTS PASSED! Backend API is working correctly.")
             return True
         else:
-            print(f"⚠️  {total_tests - passed_tests} tests failed. Check details above.")
+            print(f"\n⚠️  {total_tests - passed_tests} tests failed. Check details above.")
             return False
 
 def main():

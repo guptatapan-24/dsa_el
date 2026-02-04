@@ -627,6 +627,42 @@ class DatabaseManager:
                 (day['date'], day['total_income'], day['total_expenses'], day['transaction_count'])
             )
     
+    def _detect_anomaly_internal(self, cat_id: str, category: str, amount: float, threshold: float = 2.0) -> Dict:
+        """Internal anomaly detection before stats are updated"""
+        stats = self.fetch_one(
+            "SELECT * FROM spending_stats WHERE category_id = ?", (cat_id,)
+        )
+        
+        if not stats or stats['transaction_count'] < 3 or stats['std_dev'] == 0:
+            return {
+                'isAnomaly': False,
+                'zScore': 0,
+                'message': 'Insufficient data for anomaly detection',
+                'category': category,
+                'amount': amount
+            }
+        
+        z_score = (amount - stats['mean_amount']) / stats['std_dev']
+        is_anomaly = abs(z_score) > threshold
+        
+        if is_anomaly:
+            if z_score > 0:
+                msg = f"Unusually HIGH expense: ${amount:.2f} is {z_score:.1f} std devs above average ${stats['mean_amount']:.2f}"
+            else:
+                msg = f"Unusually LOW expense: ${amount:.2f} is {abs(z_score):.1f} std devs below average ${stats['mean_amount']:.2f}"
+        else:
+            msg = f"Normal expense within expected range for {category}"
+        
+        return {
+            'isAnomaly': is_anomaly,
+            'zScore': round(z_score, 2),
+            'message': msg,
+            'category': category,
+            'amount': amount,
+            'mean': round(stats['mean_amount'], 2),
+            'stdDev': round(stats['std_dev'], 2)
+        }
+    
     def detect_anomaly(self, category: str, amount: float, threshold: float = 2.0) -> Dict:
         """Detect if a transaction amount is anomalous using Z-Score"""
         cat_id = self.get_or_create_category(category)
@@ -665,33 +701,29 @@ class DatabaseManager:
         }
     
     def get_all_anomalies(self, threshold: float = 2.0) -> List[Dict]:
-        """Get all anomalous transactions"""
-        # Get recent expenses with their category stats
+        """Get all transactions flagged as anomalies at creation time"""
+        # Get transactions that were flagged as anomalies when added
         transactions = self.fetch_all(
             """SELECT t.id, t.amount, c.name as category, t.date, t.description,
-                      s.mean_amount, s.std_dev, s.transaction_count
+                      t.is_anomaly, t.z_score
                FROM transactions t
                JOIN categories c ON t.category_id = c.id
-               LEFT JOIN spending_stats s ON s.category_id = c.id
-               WHERE t.type = 'expense' AND s.transaction_count >= 3 AND s.std_dev > 0
+               WHERE t.type = 'expense' AND t.is_anomaly = 1
                ORDER BY t.created_at DESC
                LIMIT 100"""
         )
         
         anomalies = []
         for tx in transactions:
-            z_score = (tx['amount'] - tx['mean_amount']) / tx['std_dev']
-            if abs(z_score) > threshold:
-                anomalies.append({
-                    'id': tx['id'],
-                    'amount': tx['amount'],
-                    'category': tx['category'],
-                    'date': tx['date'],
-                    'description': tx['description'],
-                    'zScore': round(z_score, 2),
-                    'mean': round(tx['mean_amount'], 2),
-                    'isHigh': z_score > 0
-                })
+            anomalies.append({
+                'id': tx['id'],
+                'amount': tx['amount'],
+                'category': tx['category'],
+                'date': tx['date'],
+                'description': tx['description'],
+                'zScore': round(tx['z_score'], 2),
+                'isHigh': tx['z_score'] > 0
+            })
         
         return anomalies
     

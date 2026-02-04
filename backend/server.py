@@ -199,12 +199,8 @@ async def add_transaction(transaction: TransactionCreate):
     db = get_db()
     date = transaction.date or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
-    # Check for anomaly before adding (for expenses)
-    anomaly = None
-    if transaction.type == 'expense':
-        anomaly = db.detect_anomaly(transaction.category, transaction.amount)
-    
-    tx = db.add_transaction(
+    # Add transaction - anomaly detection is now done inside add_transaction
+    tx, anomaly = db.add_transaction(
         tx_type=transaction.type,
         amount=transaction.amount,
         category=transaction.category,

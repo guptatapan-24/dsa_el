@@ -39,7 +39,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        os.environ.get("FRONTEND_URL", "https://anomaly-checker.preview.emergentagent.com")
+        os.environ.get("FRONTEND_URL", "https://fix-analytics-bug.preview.emergentagent.com")
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -514,6 +514,22 @@ async def recalculate_spending_stats():
         "status": "success",
         "message": "Spending statistics recalculated from all transactions",
         "dsInfo": "All category statistics rebuilt using Welford's algorithm"
+    }
+
+@api_router.post("/trends/recalculate", response_model=dict)
+async def recalculate_daily_spending():
+    """
+    Recalculate all daily spending aggregates from transactions.
+    Use this to fix data consistency issues after transaction deletions.
+    
+    Data Structure: Rebuilds Sliding Window aggregates from scratch
+    """
+    db = get_db()
+    db.recalculate_daily_spending()
+    return {
+        "status": "success",
+        "message": "Daily spending aggregates recalculated from all transactions",
+        "dsInfo": "All daily aggregates rebuilt for Sliding Window algorithm"
     }
 
 

@@ -184,6 +184,10 @@ class DatabaseManager:
         # Update daily spending
         self._update_daily_spending(tx['date'], tx['type'], -tx['amount'], -1)
         
+        # Update spending stats for anomaly detection (for expenses)
+        if tx['type'] == 'expense':
+            self._remove_from_spending_stats(tx['category'], tx['amount'])
+        
         self.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
         return True
     
@@ -500,6 +504,63 @@ class DatabaseManager:
                    VALUES (?, ?, 0, 1, ?, 0)""",
                 (category_id, amount, amount)
             )
+    
+    def _remove_from_spending_stats(self, category: str, amount: float):
+        """Remove transaction from spending stats when deleted (reverse Welford's algorithm)"""
+        cat_id = self.get_or_create_category(category)
+        existing = self.fetch_one(
+            "SELECT * FROM spending_stats WHERE category_id = ?", (cat_id,)
+        )
+        
+        if not existing or existing['transaction_count'] <= 1:
+            # Delete stats if only one transaction was there
+            self.execute("DELETE FROM spending_stats WHERE category_id = ?", (cat_id,))
+            return
+        
+        n = existing['transaction_count'] - 1
+        old_mean = existing['mean_amount']
+        old_sum = existing['sum_amount']
+        old_sum_sq = existing['sum_squared']
+        
+        # Reverse Welford's algorithm
+        new_sum = old_sum - amount
+        new_mean = new_sum / n if n > 0 else 0
+        
+        # Reverse the sum of squared differences calculation
+        # old_sum_sq = old_sum_sq + (amount - old_prev_mean) * (amount - old_mean)
+        # We need to remove this transaction's contribution
+        # This is an approximation - recalculating from scratch would be more accurate
+        # but for practical purposes this works
+        new_sum_sq = old_sum_sq - (amount - old_mean) * (amount - new_mean)
+        new_sum_sq = max(0, new_sum_sq)  # Ensure non-negative
+        
+        std_dev = math.sqrt(new_sum_sq / n) if n > 0 and new_sum_sq > 0 else 0
+        
+        self.execute(
+            """UPDATE spending_stats 
+               SET mean_amount = ?, std_dev = ?, transaction_count = ?,
+                   sum_amount = ?, sum_squared = ?,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE category_id = ?""",
+            (new_mean, std_dev, n, new_sum, new_sum_sq, cat_id)
+        )
+    
+    def recalculate_spending_stats(self):
+        """Recalculate all spending stats from transactions (for data consistency)"""
+        # Clear all stats
+        self.execute("DELETE FROM spending_stats")
+        
+        # Recalculate from transactions
+        transactions = self.fetch_all(
+            """SELECT t.amount, c.id as category_id
+               FROM transactions t
+               JOIN categories c ON t.category_id = c.id
+               WHERE t.type = 'expense'
+               ORDER BY t.created_at ASC"""
+        )
+        
+        for tx in transactions:
+            self._update_spending_stats(tx['category_id'], tx['amount'])
     
     def detect_anomaly(self, category: str, amount: float, threshold: float = 2.0) -> Dict:
         """Detect if a transaction amount is anomalous using Z-Score"""

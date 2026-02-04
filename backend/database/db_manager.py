@@ -481,27 +481,36 @@ class DatabaseManager:
         total_income = sum(d['total_income'] for d in daily_data)
         avg_daily_expense = total_expenses / days if days > 0 else 0
         
-        # Calculate trend using improved algorithm
+        # Calculate trend using improved time-based algorithm
         trend = 'stable'
         trend_percent = 0.0
         
         if len(daily_data) >= 2:
-            # Split data into two halves
-            mid = len(daily_data) // 2
-            # Ensure we have at least 1 day in each half for odd counts
-            if len(daily_data) % 2 == 1:
-                mid += 1
+            # Calculate the midpoint date of the period
+            mid_date = (datetime.now() - timedelta(days=days//2)).strftime('%Y-%m-%d')
             
-            first_half = sum(d['total_expenses'] for d in daily_data[:mid])
-            second_half = sum(d['total_expenses'] for d in daily_data[mid:])
+            # Split transactions by date into first half and second half of the TIME period
+            first_half_expenses = 0.0
+            second_half_expenses = 0.0
+            first_half_day_count = 0
+            second_half_day_count = 0
             
-            # Calculate days in each half for proper comparison
-            first_half_days = mid
-            second_half_days = len(daily_data) - mid
+            for d in daily_data:
+                if d['date'] < mid_date:
+                    first_half_expenses += d['total_expenses']
+                    first_half_day_count += 1
+                else:
+                    second_half_expenses += d['total_expenses']
+                    second_half_day_count += 1
             
-            # Normalize by days to get average per day in each half
-            first_avg = first_half / first_half_days if first_half_days > 0 else 0
-            second_avg = second_half / second_half_days if second_half_days > 0 else 0
+            # Calculate actual days in each half of the time period (not just days with data)
+            first_period_days = days // 2
+            second_period_days = days - first_period_days
+            
+            # Calculate average daily expense in each period
+            # Use actual period days for normalization (not just days with transactions)
+            first_avg = first_half_expenses / first_period_days if first_period_days > 0 else 0
+            second_avg = second_half_expenses / second_period_days if second_period_days > 0 else 0
             
             # Calculate percentage change
             if first_avg > 0:
@@ -511,13 +520,22 @@ class DatabaseManager:
                 trend_percent = 100
             # else both are 0, trend stays stable with 0%
             
-            # Determine trend based on percentage change (10% threshold)
-            if trend_percent > 10:
+            # Also check absolute difference for cases where percentages are misleading
+            absolute_diff = second_avg - first_avg
+            
+            # Determine trend based on percentage change (10% threshold) or absolute difference
+            if trend_percent > 10 or (first_avg == 0 and second_avg > 0):
                 trend = 'increasing'
-            elif trend_percent < -10:
+            elif trend_percent < -10 or (second_avg == 0 and first_avg > 0):
                 trend = 'decreasing'
             else:
                 trend = 'stable'
+        elif len(daily_data) == 1:
+            # Only one day of data - check if it's recent (second half of period)
+            mid_date = (datetime.now() - timedelta(days=days//2)).strftime('%Y-%m-%d')
+            if daily_data[0]['date'] >= mid_date and daily_data[0]['total_expenses'] > 0:
+                trend = 'increasing'
+                trend_percent = 100
         
         return {
             'period': f'{days}-day',
@@ -735,7 +753,7 @@ class DatabaseManager:
         """Get all transactions flagged as anomalies at creation time"""
         # Get transactions that were flagged as anomalies when added
         transactions = self.fetch_all(
-            """SELECT t.id, t.amount, c.name as category, t.date, t.description,
+            """SELECT t.id, t.amount, c.name as category, c.id as category_id, t.date, t.description,
                       t.is_anomaly, t.z_score
                FROM transactions t
                JOIN categories c ON t.category_id = c.id
@@ -746,6 +764,15 @@ class DatabaseManager:
         
         anomalies = []
         for tx in transactions:
+            # Get the spending stats for this category to include mean
+            stats = self.fetch_one(
+                "SELECT mean_amount, std_dev FROM spending_stats WHERE category_id = ?",
+                (tx['category_id'],)
+            )
+            
+            mean_value = stats['mean_amount'] if stats else 0
+            std_dev_value = stats['std_dev'] if stats else 0
+            
             anomalies.append({
                 'id': tx['id'],
                 'amount': tx['amount'],
@@ -753,7 +780,9 @@ class DatabaseManager:
                 'date': tx['date'],
                 'description': tx['description'],
                 'zScore': round(tx['z_score'], 2),
-                'isHigh': tx['z_score'] > 0
+                'isHigh': tx['z_score'] > 0,
+                'mean': round(mean_value, 2),
+                'stdDev': round(std_dev_value, 2)
             })
         
         return anomalies

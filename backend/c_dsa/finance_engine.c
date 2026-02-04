@@ -12,6 +12,9 @@
  * 7. Z-Score (Welford's) - Anomaly detection with O(1) update
  * 8. Queue - Bill management with O(1) enqueue, O(n) search
  * 9. Stack - Undo operations with O(1) pop
+ * 
+ * FIX: Changed from stack allocation to heap allocation to prevent stack overflow
+ *      on Windows (default 1MB stack vs ~6MB needed for 10000 transactions)
  */
 
 #include "finance_engine.h"
@@ -331,16 +334,21 @@ int engine_get_transactions_in_range(FinanceEngine* engine, const char* start,
     return count;
 }
 
+// FIX: Changed from stack allocation to heap allocation
 int engine_get_recent_transactions(FinanceEngine* engine, int count, Transaction* out) {
     if (!engine || !out || count <= 0) return 0;
     
-    // Get all transactions in descending order (most recent first)
-    Transaction all[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* all = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!all) return 0;
+    
     int total = rbtree_reverse_inorder(engine->transaction_tree, all, MAX_TRANSACTIONS);
     
     // Copy the requested count
     int result = count < total ? count : total;
     memcpy(out, all, sizeof(Transaction) * result);
+    
+    free(all);  // Free heap memory
     
     update_stats(engine);
     return result;
@@ -500,15 +508,23 @@ bool engine_delete_bill(FinanceEngine* engine, const char* id) {
 
 // ==================== ANALYTICS ====================
 
+// FIX: Changed from stack allocation to heap allocation
 int engine_get_top_expenses(FinanceEngine* engine, int k, Transaction* out) {
     if (!engine || !out || k <= 0) return 0;
     
-    // Get all transactions from Skip List
-    Transaction all[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* all = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!all) return 0;
+    
+    Transaction* expenses = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!expenses) {
+        free(all);
+        return 0;
+    }
+    
     int total = skiplist_get_all(engine->transaction_skiplist, all, MAX_TRANSACTIONS);
     
     // Filter expenses only
-    Transaction expenses[MAX_TRANSACTIONS];
     int expense_count = 0;
     for (int i = 0; i < total; i++) {
         if (strcmp(all[i].type, "expense") == 0) {
@@ -519,19 +535,30 @@ int engine_get_top_expenses(FinanceEngine* engine, int k, Transaction* out) {
     // Use IntroSort to get top K expenses: O(n log n)
     int count = introsort_get_top_k_expenses(expenses, expense_count, k, out, &engine->sort_stats);
     
+    free(all);
+    free(expenses);
+    
     update_stats(engine);
     return count;
 }
 
+// FIX: Changed from stack allocation to heap allocation
 int engine_get_top_categories(FinanceEngine* engine, int k, CategoryAmount* out) {
     if (!engine || !out || k <= 0) return 0;
     
-    // Get all expenses from expense map
-    Budget expenses[MAX_CATEGORIES];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Budget* expenses = (Budget*)malloc(sizeof(Budget) * MAX_CATEGORIES);
+    if (!expenses) return 0;
+    
+    CategoryAmount* categories = (CategoryAmount*)malloc(sizeof(CategoryAmount) * MAX_CATEGORIES);
+    if (!categories) {
+        free(expenses);
+        return 0;
+    }
+    
     int expense_count = hashmap_get_all(engine->expense_map, expenses, MAX_CATEGORIES);
     
     // Convert to CategoryAmount
-    CategoryAmount categories[MAX_CATEGORIES];
     int cat_count = 0;
     
     for (int i = 0; i < expense_count; i++) {
@@ -545,17 +572,23 @@ int engine_get_top_categories(FinanceEngine* engine, int k, CategoryAmount* out)
     // Use IntroSort to get top K categories: O(n log n)
     int count = introsort_get_top_k_categories(categories, cat_count, k, out, &engine->sort_stats);
     
+    free(expenses);
+    free(categories);
+    
     update_stats(engine);
     return count;
 }
 
 // ==================== SPENDING TRENDS (Sliding Window) ====================
 
+// FIX: Changed from stack allocation to heap allocation
 bool engine_get_spending_trend_7day(FinanceEngine* engine, TrendResult* result) {
     if (!engine || !result) return false;
     
-    // Get all transactions
-    Transaction all[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* all = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!all) return false;
+    
     int total = rbtree_inorder_traversal(engine->transaction_tree, all, MAX_TRANSACTIONS);
     
     // Get current date as end date
@@ -571,15 +604,20 @@ bool engine_get_spending_trend_7day(FinanceEngine* engine, TrendResult* result) 
     // Get trend result
     bool success = sliding_window_get_trend(engine->spending_window_7day, result);
     
+    free(all);
+    
     update_stats(engine);
     return success;
 }
 
+// FIX: Changed from stack allocation to heap allocation
 bool engine_get_spending_trend_30day(FinanceEngine* engine, TrendResult* result) {
     if (!engine || !result) return false;
     
-    // Get all transactions
-    Transaction all[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* all = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!all) return false;
+    
     int total = rbtree_inorder_traversal(engine->transaction_tree, all, MAX_TRANSACTIONS);
     
     // Get current date as end date
@@ -595,15 +633,20 @@ bool engine_get_spending_trend_30day(FinanceEngine* engine, TrendResult* result)
     // Get trend result
     bool success = sliding_window_get_trend(engine->spending_window_30day, result);
     
+    free(all);
+    
     update_stats(engine);
     return success;
 }
 
+// FIX: Changed from stack allocation to heap allocation
 bool engine_get_spending_trend_custom(FinanceEngine* engine, int days, TrendResult* result) {
     if (!engine || !result || days <= 0) return false;
     
-    // Get all transactions
-    Transaction all[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* all = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!all) return false;
+    
     int total = rbtree_inorder_traversal(engine->transaction_tree, all, MAX_TRANSACTIONS);
     
     // Get current date as end date
@@ -620,6 +663,8 @@ bool engine_get_spending_trend_custom(FinanceEngine* engine, int days, TrendResu
     
     // Calculate trend for custom range
     sliding_window_calc_trend(all, total, start_date, end_date, result);
+    
+    free(all);
     
     update_stats(engine);
     return true;
@@ -749,10 +794,14 @@ bool engine_can_undo(FinanceEngine* engine) {
 
 // ==================== STATISTICS ====================
 
+// FIX: Changed from stack allocation to heap allocation
 double engine_get_total_balance(FinanceEngine* engine) {
     if (!engine) return 0;
     
-    Transaction transactions[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* transactions = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!transactions) return 0;
+    
     int count = skiplist_get_all(engine->transaction_skiplist, transactions, MAX_TRANSACTIONS);
     
     double balance = 0;
@@ -764,13 +813,18 @@ double engine_get_total_balance(FinanceEngine* engine) {
         }
     }
     
+    free(transactions);
     return balance;
 }
 
+// FIX: Changed from stack allocation to heap allocation
 double engine_get_total_income(FinanceEngine* engine) {
     if (!engine) return 0;
     
-    Transaction transactions[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* transactions = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!transactions) return 0;
+    
     int count = skiplist_get_all(engine->transaction_skiplist, transactions, MAX_TRANSACTIONS);
     
     double total = 0;
@@ -779,13 +833,19 @@ double engine_get_total_income(FinanceEngine* engine) {
             total += transactions[i].amount;
         }
     }
+    
+    free(transactions);
     return total;
 }
 
+// FIX: Changed from stack allocation to heap allocation
 double engine_get_total_expenses(FinanceEngine* engine) {
     if (!engine) return 0;
     
-    Transaction transactions[MAX_TRANSACTIONS];
+    // HEAP ALLOCATION instead of stack to prevent stack overflow
+    Transaction* transactions = (Transaction*)malloc(sizeof(Transaction) * MAX_TRANSACTIONS);
+    if (!transactions) return 0;
+    
     int count = skiplist_get_all(engine->transaction_skiplist, transactions, MAX_TRANSACTIONS);
     
     double total = 0;
@@ -794,6 +854,8 @@ double engine_get_total_expenses(FinanceEngine* engine) {
             total += transactions[i].amount;
         }
     }
+    
+    free(transactions);
     return total;
 }
 

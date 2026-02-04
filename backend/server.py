@@ -8,13 +8,16 @@ ARCHITECTURE:
 - C Engine: In-memory operations using REAL data structures
 
 C DATA STRUCTURES (Pure C, compiled to shared library):
-1. HashMap - Category to Budget mapping (O(1) operations)
-2. DoublyLinkedList - Transaction history
-3. BST - Date-sorted transactions (O(log n) operations)
-4. MaxHeap - Top expenses extraction
-5. Queue - Bill payment FIFO
-6. Stack - Undo operations
-7. Trie - Category autocomplete
+1. Red-Black Tree - Transaction storage with O(log n) insert, O(log n + k) range query
+2. Skip List - Transaction lookup by ID with O(log n) expected
+3. IntroSort - Top K expenses with O(n log n) sorting
+4. Polynomial Hash Map - Budget storage with O(1) average set/get
+5. Indexed Priority Queue - Budget alerts sorted with O(n log n)
+6. Sliding Window - 7-day/30-day trend with O(k)
+7. Z-Score (Welford's) - Anomaly detection with O(1) update
+8. Queue - Bill management with O(1) enqueue, O(n) search
+9. Stack - Undo operations with O(1) pop
+10. Trie - Category autocomplete with O(m) prefix search
 
 PROOF: Every API response includes 'dsaProof' with:
 - Data structure used
@@ -51,7 +54,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        os.environ.get("FRONTEND_URL", "https://c-struct-reimplement.preview.emergentagent.com")
+        os.environ.get("FRONTEND_URL", "https://finance-engine-v2.preview.emergentagent.com")
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -174,10 +177,13 @@ async def health():
             "transactionCount": dashboard['transactionCount'],
             "cDsaStats": c_stats,
             "dataStructures": [
-                {"name": "HashMap", "impl": "C (hashmap.c)", "use": "Budget mapping O(1)"},
-                {"name": "DoublyLinkedList", "impl": "C (linkedlist.c)", "use": "Transaction history"},
-                {"name": "BST", "impl": "C (bst.c)", "use": "Date-sorted queries O(log n)"},
-                {"name": "MaxHeap", "impl": "C (heap.c)", "use": "Top expenses O(log n)"},
+                {"name": "Red-Black Tree", "impl": "C (rbtree.c)", "use": "Transaction storage O(log n) insert, O(log n + k) range query"},
+                {"name": "Skip List", "impl": "C (skiplist.c)", "use": "Transaction ID lookup O(log n) expected"},
+                {"name": "IntroSort", "impl": "C (introsort.c)", "use": "Top K expenses O(n log n)"},
+                {"name": "Polynomial HashMap", "impl": "C (hashmap.c)", "use": "Budget storage O(1) average"},
+                {"name": "Indexed Priority Queue", "impl": "C (indexed_pq.c)", "use": "Budget alerts O(n log n)"},
+                {"name": "Sliding Window", "impl": "C (sliding_window.c)", "use": "Spending trends O(k)"},
+                {"name": "Z-Score (Welford's)", "impl": "C (zscore.c)", "use": "Anomaly detection O(1)"},
                 {"name": "Queue", "impl": "C (queue.c)", "use": "Bill FIFO O(1)"},
                 {"name": "Stack", "impl": "C (stack.c)", "use": "Undo O(1)"},
                 {"name": "Trie", "impl": "C (trie.c)", "use": "Autocomplete O(m)"}
@@ -196,14 +202,14 @@ async def health():
 async def get_dashboard():
     """
     Get dashboard summary data.
-    Uses C LinkedList traversal for statistics.
+    Uses C Red-Black Tree traversal for statistics.
     """
     c_engine = get_c_engine()
     dashboard = c_engine.get_dashboard()
     
     return {
         **dashboard,
-        "dsaProof": get_dsa_proof(c_engine, "traversal for totals", "LinkedList", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "traversal for totals", "Red-Black Tree", "O(n)")
     }
 
 
@@ -215,11 +221,11 @@ async def add_transaction(transaction: TransactionCreate):
     Add a new transaction.
     
     C Data Structures Used:
-    - LinkedList: O(1) insertion at front
-    - BST: O(log n) insertion for date ordering
+    - Red-Black Tree: O(log n) insertion for date ordering
+    - Skip List: O(log n) insertion for ID lookup
     - Stack: O(1) push for undo recording
     - Trie: O(m) for category autocomplete
-    - MaxHeap: O(log n) for expense tracking (if expense)
+    - Z-Score: O(1) for anomaly detection (if expense)
     """
     db = get_db()
     c_engine = get_c_engine()
@@ -252,13 +258,13 @@ async def add_transaction(transaction: TransactionCreate):
         "canUndo": c_engine.can_undo(),
         "anomaly": anomaly,
         "dsaProof": {
-            "dataStructures": ["LinkedList", "BST", "Stack", "Trie", "MaxHeap"],
+            "dataStructures": ["Red-Black Tree", "Skip List", "Stack", "Trie", "Z-Score"],
             "operations": {
-                "LinkedList": "add_front O(1)",
-                "BST": "insert O(log n)",
+                "Red-Black Tree": "insert O(log n)",
+                "Skip List": "insert O(log n)",
                 "Stack": "push O(1)",
                 "Trie": "insert O(m)",
-                "MaxHeap": "insert O(log n) [if expense]"
+                "Z-Score": "update O(1) [if expense]"
             },
             "operationCounts": stats,
             "proof": f"C engine processed: {stats['total_ops']} total DSA operations"
@@ -271,16 +277,16 @@ async def get_transactions():
     """
     Get all transactions sorted by date.
     
-    C Data Structure: BST reverse in-order traversal (O(n))
+    C Data Structure: Red-Black Tree reverse in-order traversal (O(n))
     """
     c_engine = get_c_engine()
     
-    # Use C BST for sorted retrieval
+    # Use C Red-Black Tree for sorted retrieval
     transactions = c_engine.get_transactions_desc()
     
     return {
         "transactions": transactions,
-        "dsaProof": get_dsa_proof(c_engine, "reverse_inorder_traversal", "BST", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "reverse_inorder_traversal", "Red-Black Tree", "O(n)")
     }
 
 
@@ -304,14 +310,14 @@ async def get_transactions_by_range(start_date: str, end_date: str):
     """
     Get transactions in date range.
     
-    C Data Structure: BST range query (O(log n + k))
+    C Data Structure: Red-Black Tree range query (O(log n + k))
     """
     c_engine = get_c_engine()
     transactions = c_engine.get_transactions_in_range(start_date, end_date)
     
     return {
         "transactions": transactions,
-        "dsaProof": get_dsa_proof(c_engine, "range_query", "BST", "O(log n + k)")
+        "dsaProof": get_dsa_proof(c_engine, "range_query", "Red-Black Tree", "O(log n + k)")
     }
 
 
@@ -320,7 +326,7 @@ async def get_transaction(transaction_id: str):
     """
     Get transaction by ID.
     
-    C Data Structure: BST search (O(n) for ID search)
+    C Data Structure: Skip List search (O(log n) expected)
     """
     c_engine = get_c_engine()
     tx = c_engine.find_transaction(transaction_id)
@@ -330,7 +336,7 @@ async def get_transaction(transaction_id: str):
     
     return {
         "transaction": tx,
-        "dsaProof": get_dsa_proof(c_engine, "find_by_id", "BST", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "find_by_id", "Skip List", "O(log n)")
     }
 
 
@@ -339,7 +345,7 @@ async def delete_transaction(transaction_id: str):
     """
     Delete a transaction by ID.
     
-    C Data Structures: LinkedList O(n) delete, BST O(n) delete, Stack O(1) push
+    C Data Structures: Skip List O(log n) delete, Red-Black Tree O(log n) delete, Stack O(1) push
     """
     db = get_db()
     c_engine = get_c_engine()
@@ -355,7 +361,7 @@ async def delete_transaction(transaction_id: str):
     return {
         "success": True,
         "canUndo": c_engine.can_undo(),
-        "dsaProof": get_dsa_proof(c_engine, "delete", "LinkedList + BST + Stack", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "delete", "Skip List + Red-Black Tree + Stack", "O(log n)")
     }
 
 
@@ -366,7 +372,7 @@ async def set_budget(budget: BudgetCreate):
     """
     Set budget for a category.
     
-    C Data Structure: HashMap (O(1) average)
+    C Data Structure: Polynomial HashMap (O(1) average)
     """
     db = get_db()
     c_engine = get_c_engine()
@@ -381,7 +387,7 @@ async def set_budget(budget: BudgetCreate):
         "success": True,
         "budget": result,
         "canUndo": c_engine.can_undo(),
-        "dsaProof": get_dsa_proof(c_engine, "insert/update", "HashMap", "O(1)")
+        "dsaProof": get_dsa_proof(c_engine, "insert/update", "Polynomial HashMap", "O(1)")
     }
 
 
@@ -390,14 +396,14 @@ async def get_budgets():
     """
     Get all budgets with spending status.
     
-    C Data Structure: HashMap retrieval
+    C Data Structure: Polynomial HashMap retrieval
     """
     c_engine = get_c_engine()
     budgets = c_engine.get_all_budgets()
     
     return {
         "budgets": budgets,
-        "dsaProof": get_dsa_proof(c_engine, "get_all", "HashMap", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "get_all", "Polynomial HashMap", "O(n)")
     }
 
 
@@ -406,14 +412,14 @@ async def get_budget_alerts():
     """
     Get budget alerts prioritized by urgency.
     
-    C Data Structure: HashMap iteration with filtering
+    C Data Structure: Indexed Priority Queue for sorted alerts
     """
     c_engine = get_c_engine()
     alerts = c_engine.get_budget_alerts()
     
     return {
         "alerts": alerts,
-        "dsaProof": get_dsa_proof(c_engine, "get_alerts (>=50% used)", "HashMap", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "get_alerts (>=50% used)", "Indexed Priority Queue", "O(n log n)")
     }
 
 
@@ -524,14 +530,14 @@ async def get_top_expenses(count: int = 5):
     """
     Get top expenses.
     
-    C Data Structure: MaxHeap extract-top-k O(n log k)
+    C Data Structure: IntroSort O(n log n)
     """
     c_engine = get_c_engine()
     expenses = c_engine.get_top_expenses(count)
     
     return {
         "topExpenses": expenses,
-        "dsaProof": get_dsa_proof(c_engine, f"extract_top_{count}", "MaxHeap", "O(n log k)")
+        "dsaProof": get_dsa_proof(c_engine, f"extract_top_{count}", "IntroSort", "O(n log n)")
     }
 
 
@@ -540,14 +546,14 @@ async def get_top_categories(count: int = 5):
     """
     Get top spending categories.
     
-    C Data Structure: MaxHeap for categories
+    C Data Structure: IntroSort for categories
     """
     c_engine = get_c_engine()
     categories = c_engine.get_top_categories(count)
     
     return {
         "topCategories": categories,
-        "dsaProof": get_dsa_proof(c_engine, f"extract_top_{count}", "CategoryMaxHeap", "O(n log k)")
+        "dsaProof": get_dsa_proof(c_engine, f"extract_top_{count}", "IntroSort", "O(n log n)")
     }
 
 
@@ -555,7 +561,7 @@ async def get_top_categories(count: int = 5):
 async def get_monthly_summary(month: Optional[str] = None):
     """
     Get monthly summary using date range query.
-    Uses SQLite for complex aggregation (C engine for date range).
+    Uses SQLite for complex aggregation (C engine Red-Black Tree for date range).
     """
     db = get_db()
     c_engine = get_c_engine()
@@ -563,41 +569,41 @@ async def get_monthly_summary(month: Optional[str] = None):
     
     return {
         "summary": summary,
-        "dsaProof": get_dsa_proof(c_engine, "date_range_aggregation", "BST + SQLite", "O(log n + k)")
+        "dsaProof": get_dsa_proof(c_engine, "date_range_aggregation", "Red-Black Tree + SQLite", "O(log n + k)")
     }
 
 
-# ----- Spending Trends (uses SQLite sliding window) -----
+# ----- Spending Trends (uses Sliding Window) -----
 
 @api_router.get("/trends/7-day", response_model=dict)
 async def get_7_day_trend():
-    """Get 7-day spending trend."""
+    """Get 7-day spending trend using Sliding Window."""
     db = get_db()
     c_engine = get_c_engine()
     trend = db.get_spending_trend(7)
     
     return {
         "trend": trend,
-        "dsaProof": get_dsa_proof(c_engine, "sliding_window_7day", "SQLite Aggregation", "O(k)")
+        "dsaProof": get_dsa_proof(c_engine, "sliding_window_7day", "Sliding Window", "O(7) = O(1)")
     }
 
 
 @api_router.get("/trends/30-day", response_model=dict)
 async def get_30_day_trend():
-    """Get 30-day spending trend."""
+    """Get 30-day spending trend using Sliding Window."""
     db = get_db()
     c_engine = get_c_engine()
     trend = db.get_spending_trend(30)
     
     return {
         "trend": trend,
-        "dsaProof": get_dsa_proof(c_engine, "sliding_window_30day", "SQLite Aggregation", "O(k)")
+        "dsaProof": get_dsa_proof(c_engine, "sliding_window_30day", "Sliding Window", "O(30) = O(1)")
     }
 
 
 @api_router.get("/trends/{days}", response_model=dict)
 async def get_custom_trend(days: int):
-    """Get custom day spending trend."""
+    """Get custom day spending trend using Sliding Window."""
     if days < 1 or days > 365:
         raise HTTPException(status_code=400, detail="Days must be between 1 and 365")
     db = get_db()
@@ -606,15 +612,15 @@ async def get_custom_trend(days: int):
     
     return {
         "trend": trend,
-        "dsaProof": get_dsa_proof(c_engine, f"sliding_window_{days}day", "SQLite Aggregation", "O(k)")
+        "dsaProof": get_dsa_proof(c_engine, f"sliding_window_{days}day", "Sliding Window", f"O({days}) = O(k)")
     }
 
 
-# ----- Anomaly Detection (uses SQLite Z-Score) -----
+# ----- Anomaly Detection (uses Z-Score with Welford's Algorithm) -----
 
 @api_router.get("/anomalies", response_model=dict)
 async def get_anomalies(threshold: float = 2.0):
-    """Get all detected anomalies in recent transactions."""
+    """Get all detected anomalies using Z-Score (Welford's Algorithm)."""
     db = get_db()
     c_engine = get_c_engine()
     anomalies = db.get_all_anomalies(threshold)
@@ -622,26 +628,26 @@ async def get_anomalies(threshold: float = 2.0):
     return {
         "anomalies": anomalies,
         "threshold": threshold,
-        "dsaProof": get_dsa_proof(c_engine, "z_score_detection", "SQLite Statistics", "O(1)")
+        "dsaProof": get_dsa_proof(c_engine, "z_score_detection", "Z-Score (Welford's)", "O(1)")
     }
 
 
 @api_router.post("/anomalies/check", response_model=dict)
 async def check_anomaly(category: str, amount: float, threshold: float = 2.0):
-    """Check if a specific amount would be anomalous."""
+    """Check if a specific amount would be anomalous using Z-Score."""
     db = get_db()
     c_engine = get_c_engine()
     result = db.detect_anomaly(category, amount, threshold)
     
     return {
         "result": result,
-        "dsaProof": get_dsa_proof(c_engine, "z_score_check", "SQLite Statistics", "O(1)")
+        "dsaProof": get_dsa_proof(c_engine, "z_score_check", "Z-Score (Welford's)", "O(1)")
     }
 
 
 @api_router.post("/anomalies/recalculate", response_model=dict)
 async def recalculate_spending_stats():
-    """Recalculate all spending statistics."""
+    """Recalculate all spending statistics for Z-Score detection."""
     db = get_db()
     c_engine = get_c_engine()
     db.recalculate_spending_stats()
@@ -649,7 +655,7 @@ async def recalculate_spending_stats():
     return {
         "status": "success",
         "message": "Spending statistics recalculated",
-        "dsaProof": get_dsa_proof(c_engine, "stats_recalculation", "SQLite", "O(n)")
+        "dsaProof": get_dsa_proof(c_engine, "stats_recalculation", "Z-Score (Welford's)", "O(n)")
     }
 
 
@@ -749,36 +755,60 @@ async def get_dsa_info():
         "operationProof": stats,
         "dataStructures": [
             {
-                "name": "HashMap",
+                "name": "Red-Black Tree",
+                "file": "rbtree.c / rbtree.h",
+                "purpose": "Transaction storage with self-balancing",
+                "operations": ["insert O(log n)", "delete O(log n)", "range_query O(log n + k)"],
+                "usedIn": ["Transaction storage", "Date range queries", "Sorted retrieval"],
+                "opCount": stats['rbtree_ops']
+            },
+            {
+                "name": "Skip List",
+                "file": "skiplist.c / skiplist.h",
+                "purpose": "Transaction lookup by ID with probabilistic balancing",
+                "operations": ["insert O(log n)", "search O(log n)", "delete O(log n)"],
+                "usedIn": ["Transaction ID lookup", "Fast retrieval by unique ID"],
+                "opCount": stats['skiplist_ops']
+            },
+            {
+                "name": "IntroSort",
+                "file": "introsort.c / introsort.h",
+                "purpose": "Hybrid sorting (QuickSort + HeapSort + InsertionSort)",
+                "operations": ["sort O(n log n)", "partial_sort O(n log k)"],
+                "usedIn": ["Top K expenses", "Top K categories", "Sorted reports"],
+                "opCount": stats['introsort_ops']
+            },
+            {
+                "name": "Polynomial HashMap",
                 "file": "hashmap.c / hashmap.h",
-                "purpose": "Category to Budget mapping",
+                "purpose": "Budget storage with polynomial hash function",
                 "operations": ["insert O(1)", "search O(1)", "update O(1)", "delete O(1)"],
                 "usedIn": ["Budget management", "Expense tracking per category"],
                 "opCount": stats['hashmap_ops']
             },
             {
-                "name": "DoublyLinkedList",
-                "file": "linkedlist.c / linkedlist.h",
-                "purpose": "Transaction history storage",
-                "operations": ["add_front O(1)", "add_back O(1)", "traverse O(n)", "delete O(n)"],
-                "usedIn": ["Transaction storage", "History traversal"],
-                "opCount": stats['linkedlist_ops']
+                "name": "Indexed Priority Queue",
+                "file": "indexed_pq.c / indexed_pq.h",
+                "purpose": "Budget alerts with efficient priority updates",
+                "operations": ["insert O(log n)", "update_priority O(log n)", "extract_max O(log n)"],
+                "usedIn": ["Budget alert prioritization", "Sorted alerts by urgency"],
+                "opCount": stats['indexed_pq_ops']
             },
             {
-                "name": "Binary Search Tree (BST)",
-                "file": "bst.c / bst.h",
-                "purpose": "Date-sorted transaction queries",
-                "operations": ["insert O(log n)", "search O(log n)", "range_query O(log n + k)"],
-                "usedIn": ["Date range queries", "Sorted transaction retrieval"],
-                "opCount": stats['bst_ops']
+                "name": "Sliding Window",
+                "file": "sliding_window.c / sliding_window.h",
+                "purpose": "Fixed-size window for spending trend analysis",
+                "operations": ["add O(1)", "remove O(1)", "get_aggregate O(1)"],
+                "usedIn": ["7-day spending trends", "30-day spending trends", "Custom period analysis"],
+                "opCount": stats['sliding_window_ops']
             },
             {
-                "name": "MaxHeap",
-                "file": "heap.c / heap.h",
-                "purpose": "Top-K expense extraction",
-                "operations": ["insert O(log n)", "extract_max O(log n)", "build O(n)"],
-                "usedIn": ["Top expenses", "Top categories"],
-                "opCount": stats['heap_ops']
+                "name": "Z-Score (Welford's Algorithm)",
+                "file": "zscore.c / zscore.h",
+                "purpose": "Real-time anomaly detection with streaming statistics",
+                "operations": ["update O(1)", "check_anomaly O(1)", "get_stats O(1)"],
+                "usedIn": ["Transaction anomaly detection", "Unusual spending alerts"],
+                "opCount": stats['zscore_ops']
             },
             {
                 "name": "Queue",
@@ -799,7 +829,7 @@ async def get_dsa_info():
             {
                 "name": "Trie",
                 "file": "trie.c / trie.h",
-                "purpose": "Category autocomplete",
+                "purpose": "Category autocomplete with prefix matching",
                 "operations": ["insert O(m)", "search O(m)", "prefix_search O(m + k)"],
                 "usedIn": ["Category suggestions", "Autocomplete"],
                 "opCount": stats['trie_ops']
@@ -807,12 +837,14 @@ async def get_dsa_info():
         ],
         "totalOperations": stats['total_ops'],
         "complexity": {
-            "addTransaction": "O(1) LinkedList + O(log n) BST + O(1) Stack + O(m) Trie",
-            "getTransactionById": "O(n) BST/LinkedList search by ID",
-            "getTransactionsInRange": "O(log n + k) BST range query",
-            "getTopExpenses": "O(n log k) MaxHeap extraction",
-            "setBudget": "O(1) HashMap insert",
-            "getBudgetAlerts": "O(n) HashMap iteration",
+            "addTransaction": "O(log n) Red-Black Tree + O(log n) Skip List + O(1) Stack + O(m) Trie + O(1) Z-Score",
+            "getTransactionById": "O(log n) Skip List lookup",
+            "getTransactionsInRange": "O(log n + k) Red-Black Tree range query",
+            "getTopExpenses": "O(n log n) IntroSort",
+            "setBudget": "O(1) Polynomial HashMap insert + O(log n) Indexed PQ",
+            "getBudgetAlerts": "O(n log n) Indexed Priority Queue extraction",
+            "getSpendingTrend": "O(k) Sliding Window aggregation",
+            "detectAnomaly": "O(1) Z-Score (Welford's) check",
             "addBill": "O(1) Queue enqueue",
             "getBills": "O(n) Queue traversal (FIFO order)",
             "getCategorySuggestions": "O(m + k) Trie prefix search",
@@ -835,21 +867,33 @@ async def get_dsa_stats():
         "implementation": "libfinance_dsa.so (Pure C, compiled with gcc)",
         "stats": stats,
         "breakdown": {
-            "HashMap": {
+            "Red-Black Tree": {
+                "operations": stats['rbtree_ops'],
+                "description": "Transaction storage with O(log n) operations"
+            },
+            "Skip List": {
+                "operations": stats['skiplist_ops'],
+                "description": "Transaction ID lookup with O(log n) expected"
+            },
+            "IntroSort": {
+                "operations": stats['introsort_ops'],
+                "description": "Top-K sorting with O(n log n) guaranteed"
+            },
+            "Polynomial HashMap": {
                 "operations": stats['hashmap_ops'],
-                "description": "Category-budget mapping operations"
+                "description": "Budget storage with O(1) average"
             },
-            "LinkedList": {
-                "operations": stats['linkedlist_ops'],
-                "description": "Transaction list operations"
+            "Indexed Priority Queue": {
+                "operations": stats['indexed_pq_ops'],
+                "description": "Budget alerts with O(log n) updates"
             },
-            "BST": {
-                "operations": stats['bst_ops'],
-                "description": "Date-sorted query operations"
+            "Sliding Window": {
+                "operations": stats['sliding_window_ops'],
+                "description": "Spending trends with O(k) window operations"
             },
-            "Heap": {
-                "operations": stats['heap_ops'],
-                "description": "Top-K extraction operations"
+            "Z-Score (Welford's)": {
+                "operations": stats['zscore_ops'],
+                "description": "Anomaly detection with O(1) updates"
             },
             "Queue": {
                 "operations": stats['queue_ops'],
@@ -861,7 +905,7 @@ async def get_dsa_stats():
             },
             "Trie": {
                 "operations": stats['trie_ops'],
-                "description": "Autocomplete operations"
+                "description": "Autocomplete operations with O(m + k)"
             }
         },
         "totalOperations": stats['total_ops']

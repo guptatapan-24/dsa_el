@@ -123,7 +123,7 @@ export default function DSAInfo() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
             <div className="p-4 bg-white rounded-lg shadow-sm">
-              <div className="text-3xl font-bold text-primary">7</div>
+              <div className="text-3xl font-bold text-primary">10</div>
               <div className="text-sm text-slate-500">Data Structures</div>
             </div>
             <div className="p-4 bg-white rounded-lg shadow-sm">
@@ -293,6 +293,22 @@ export default function DSAInfo() {
           <div className="p-3 bg-white rounded shadow-sm">
             <Badge className="bg-orange-500 mb-2">IntroSort</Badge>
             <p className="text-slate-600">Use for: Guaranteed O(n log n) sorting</p>
+          </div>
+          <div className="p-3 bg-white rounded shadow-sm">
+            <Badge className="bg-pink-500 mb-2">Z-Score (Welford's)</Badge>
+            <p className="text-slate-600">Use for: Real-time anomaly detection</p>
+          </div>
+          <div className="p-3 bg-white rounded shadow-sm">
+            <Badge className="bg-yellow-500 mb-2">Queue</Badge>
+            <p className="text-slate-600">Use for: FIFO operations, bill management</p>
+          </div>
+          <div className="p-3 bg-white rounded shadow-sm">
+            <Badge className="bg-indigo-500 mb-2">Stack</Badge>
+            <p className="text-slate-600">Use for: LIFO operations, undo functionality</p>
+          </div>
+          <div className="p-3 bg-white rounded shadow-sm">
+            <Badge className="bg-teal-500 mb-2">Trie</Badge>
+            <p className="text-slate-600">Use for: Prefix search, autocomplete</p>
           </div>
         </div>
       </div>

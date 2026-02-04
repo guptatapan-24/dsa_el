@@ -1,16 +1,19 @@
 """
 C Data Structures Engine - Python ctypes Wrapper
 Provides Python interface to the C finance engine library
-All 7 data structures are implemented in pure C and called via ctypes
+All 7+ data structures are implemented in pure C and called via ctypes
 
-Data Structures:
-1. HashMap - Category to Budget mapping (O(1) operations)
-2. DoublyLinkedList - Transaction history
-3. BST - Date-sorted transactions (O(log n) operations)
-4. MaxHeap - Top expenses (O(log n) operations)
-5. Queue - Bill payment FIFO (O(1) operations)
-6. Stack - Undo operations (O(1) operations)
-7. Trie - Category autocomplete (O(m) operations)
+Data Structures (as per DSA Lab requirements):
+1. Red-Black Tree - Transaction storage with O(log n) insert, O(log n + k) range query
+2. Skip List - Transaction lookup by ID with O(log n) expected
+3. IntroSort - Top K expenses with O(n log n) sorting
+4. Polynomial Hash Map - Budget storage with O(1) average set/get
+5. Indexed Priority Queue - Budget alerts sorted with O(n log n)
+6. Sliding Window - 7-day/30-day trend with O(k) = O(1)
+7. Z-Score (Welford's) - Anomaly detection with O(1) update
+8. Queue - Bill management with O(1) enqueue, O(n) search
+9. Stack - Undo operations with O(1) pop
+10. Trie - Category autocomplete with O(m) prefix search
 """
 
 import ctypes
@@ -20,7 +23,15 @@ from typing import List, Dict, Optional, Tuple
 import os
 
 # Path to the shared library
-LIB_PATH = Path(__file__).parent / "c_dsa" / "libfinance_dsa.so"
+import platform
+from pathlib import Path
+
+base = Path(__file__).parent / "c_dsa"
+
+if platform.system() == "Windows":
+    LIB_PATH = base / "finance_dsa.dll"
+else:
+    LIB_PATH = base / "libfinance_dsa.so"
 
 # C Structure definitions (must match common.h)
 MAX_STRING_LEN = 256
@@ -107,26 +118,77 @@ class CCategoryAmount(Structure):
 class CDSAStats(Structure):
     """Matches DSAStats struct in C - tracks operations per data structure"""
     _fields_ = [
-        ("hashmap_ops", c_int),
-        ("linkedlist_ops", c_int),
-        ("bst_ops", c_int),
-        ("heap_ops", c_int),
-        ("queue_ops", c_int),
-        ("stack_ops", c_int),
-        ("trie_ops", c_int),
-        ("total_ops", c_int),
+        ("rbtree_ops", c_int),          # Red-Black Tree operations
+        ("skiplist_ops", c_int),        # Skip List operations
+        ("introsort_ops", c_int),       # IntroSort operations
+        ("hashmap_ops", c_int),         # Polynomial HashMap operations
+        ("indexed_pq_ops", c_int),      # Indexed Priority Queue operations
+        ("sliding_window_ops", c_int),  # Sliding Window operations
+        ("zscore_ops", c_int),          # Z-Score (Welford's) operations
+        ("queue_ops", c_int),           # Queue operations
+        ("stack_ops", c_int),           # Stack operations
+        ("trie_ops", c_int),            # Trie operations
+        ("total_ops", c_int),           # Total operations
     ]
     
     def to_dict(self) -> dict:
         return {
+            'rbtree_ops': self.rbtree_ops,
+            'skiplist_ops': self.skiplist_ops,
+            'introsort_ops': self.introsort_ops,
             'hashmap_ops': self.hashmap_ops,
-            'linkedlist_ops': self.linkedlist_ops,
-            'bst_ops': self.bst_ops,
-            'heap_ops': self.heap_ops,
+            'indexed_pq_ops': self.indexed_pq_ops,
+            'sliding_window_ops': self.sliding_window_ops,
+            'zscore_ops': self.zscore_ops,
             'queue_ops': self.queue_ops,
             'stack_ops': self.stack_ops,
             'trie_ops': self.trie_ops,
             'total_ops': self.total_ops,
+        }
+
+
+class CTrendResult(Structure):
+    """Matches TrendResult struct in C for spending trends"""
+    _fields_ = [
+        ("days", c_int),
+        ("total_spending", c_double),
+        ("average_daily", c_double),
+        ("min_daily", c_double),
+        ("max_daily", c_double),
+        ("trend_direction", c_int),  # -1: decreasing, 0: stable, 1: increasing
+    ]
+    
+    def to_dict(self) -> dict:
+        direction_map = {-1: 'decreasing', 0: 'stable', 1: 'increasing'}
+        return {
+            'days': self.days,
+            'totalSpending': self.total_spending,
+            'averageDaily': self.average_daily,
+            'minDaily': self.min_daily,
+            'maxDaily': self.max_daily,
+            'trendDirection': direction_map.get(self.trend_direction, 'unknown'),
+        }
+
+
+class CAnomalyResult(Structure):
+    """Matches AnomalyResult struct in C for anomaly detection"""
+    _fields_ = [
+        ("is_anomaly", c_bool),
+        ("z_score", c_double),
+        ("mean", c_double),
+        ("std_dev", c_double),
+        ("threshold", c_double),
+        ("message", c_char * MAX_STRING_LEN),
+    ]
+    
+    def to_dict(self) -> dict:
+        return {
+            'isAnomaly': bool(self.is_anomaly),
+            'zScore': self.z_score,
+            'mean': self.mean,
+            'stdDev': self.std_dev,
+            'threshold': self.threshold,
+            'message': self.message.decode('utf-8', errors='replace'),
         }
 
 
@@ -138,6 +200,18 @@ class CFinanceEngine:
     This is the PROOF that real C data structures are being used:
     - Every operation increments the corresponding DSA counter
     - DSA stats can be retrieved to verify data structure usage
+    
+    Data Structures Used:
+    1. Red-Black Tree - O(log n) insert, O(log n + k) range query for transactions
+    2. Skip List - O(log n) expected lookup by transaction ID
+    3. IntroSort - O(n log n) for top-K expense extraction
+    4. Polynomial HashMap - O(1) average for budget operations
+    5. Indexed Priority Queue - O(n log n) for sorted budget alerts
+    6. Sliding Window - O(k) for spending trend calculations
+    7. Z-Score (Welford's) - O(1) for anomaly detection
+    8. Queue - O(1) enqueue for bill management
+    9. Stack - O(1) push/pop for undo operations
+    10. Trie - O(m) for category autocomplete
     """
     
     def __init__(self):
@@ -160,7 +234,7 @@ class CFinanceEngine:
             raise RuntimeError("Failed to create C finance engine")
         
         self._is_initialized = True
-        print(f"C Finance Engine initialized with 7 data structures")
+        print(f"C Finance Engine initialized with 10 data structures (Red-Black Tree, Skip List, IntroSort, HashMap, Indexed PQ, Sliding Window, Z-Score, Queue, Stack, Trie)")
     
     def _setup_function_signatures(self):
         """Define C function signatures for ctypes"""
@@ -305,11 +379,11 @@ class CFinanceEngine:
         """
         Add a transaction.
         C Data Structures Used:
-        - LinkedList: O(1) insertion
-        - BST: O(log n) insertion for date ordering
+        - Red-Black Tree: O(log n) insertion for date ordering
+        - Skip List: O(log n) insertion for ID lookup
         - Stack: O(1) for undo recording
         - Trie: O(m) for category addition
-        - MaxHeap: O(log n) for expense tracking
+        - Z-Score: O(1) for anomaly tracking
         """
         result = self._lib.engine_add_transaction(
             self._engine,
@@ -325,8 +399,8 @@ class CFinanceEngine:
         """
         Delete a transaction.
         C Data Structures Used:
-        - LinkedList: O(n) deletion by ID
-        - BST: O(n) deletion by ID
+        - Skip List: O(log n) deletion by ID
+        - Red-Black Tree: O(log n) deletion
         - Stack: O(1) for undo recording
         """
         return self._lib.engine_delete_transaction(self._engine, self._encode(tx_id))
@@ -334,7 +408,7 @@ class CFinanceEngine:
     def get_all_transactions(self) -> List[dict]:
         """
         Get all transactions.
-        C Data Structure Used: LinkedList traversal O(n)
+        C Data Structure Used: Red-Black Tree traversal O(n)
         """
         buffer = (CTransaction * 10000)()
         count = self._lib.engine_get_all_transactions(self._engine, buffer, 10000)
@@ -343,7 +417,7 @@ class CFinanceEngine:
     def get_transactions_desc(self) -> List[dict]:
         """
         Get transactions in descending date order.
-        C Data Structure Used: BST reverse in-order traversal O(n)
+        C Data Structure Used: Red-Black Tree reverse in-order traversal O(n)
         """
         buffer = (CTransaction * 10000)()
         count = self._lib.engine_get_transactions_desc(self._engine, buffer, 10000)
@@ -352,7 +426,7 @@ class CFinanceEngine:
     def get_transactions_in_range(self, start_date: str, end_date: str) -> List[dict]:
         """
         Get transactions in date range.
-        C Data Structure Used: BST range query O(log n + k)
+        C Data Structure Used: Red-Black Tree range query O(log n + k)
         """
         buffer = (CTransaction * 10000)()
         count = self._lib.engine_get_transactions_in_range(
@@ -376,7 +450,7 @@ class CFinanceEngine:
     def find_transaction(self, tx_id: str) -> Optional[dict]:
         """
         Find transaction by ID.
-        C Data Structure Used: BST search O(n) for ID
+        C Data Structure Used: Skip List search O(log n) expected
         """
         tx = CTransaction()
         if self._lib.engine_find_transaction(self._engine, self._encode(tx_id), byref(tx)):
@@ -389,16 +463,17 @@ class CFinanceEngine:
         """
         Set budget for category.
         C Data Structures Used:
-        - HashMap: O(1) insertion/update
+        - Polynomial HashMap: O(1) insertion/update
         - Stack: O(1) for undo recording
         - Trie: O(m) for category addition
+        - Indexed Priority Queue: O(log n) for alert sorting
         """
         return self._lib.engine_set_budget(self._engine, self._encode(category), c_double(limit))
     
     def get_budget(self, category: str) -> Optional[dict]:
         """
         Get budget for category.
-        C Data Structure Used: HashMap O(1) lookup
+        C Data Structure Used: Polynomial HashMap O(1) lookup
         """
         budget = CBudget()
         if self._lib.engine_get_budget(self._engine, self._encode(category), byref(budget)):
@@ -408,7 +483,7 @@ class CFinanceEngine:
     def get_all_budgets(self) -> List[dict]:
         """
         Get all budgets.
-        C Data Structure Used: HashMap iteration O(n)
+        C Data Structure Used: Polynomial HashMap iteration O(n)
         """
         buffer = (CBudget * 100)()
         count = self._lib.engine_get_all_budgets(self._engine, buffer, 100)
@@ -417,7 +492,7 @@ class CFinanceEngine:
     def get_budget_alerts(self) -> List[dict]:
         """
         Get budget alerts (>=50% used).
-        C Data Structure Used: HashMap iteration + filtering
+        C Data Structure Used: Indexed Priority Queue for sorted alerts O(n log n)
         """
         buffer = (CBudget * 100)()
         count = self._lib.engine_get_budget_alerts(self._engine, buffer, 100)
@@ -482,7 +557,7 @@ class CFinanceEngine:
     def get_top_expenses(self, k: int) -> List[dict]:
         """
         Get top k expenses.
-        C Data Structure Used: MaxHeap extract-top-k O(n log k)
+        C Data Structure Used: IntroSort O(n log n)
         """
         buffer = (CTransaction * k)()
         count = self._lib.engine_get_top_expenses(self._engine, k, buffer)
@@ -491,7 +566,7 @@ class CFinanceEngine:
     def get_top_categories(self, k: int) -> List[dict]:
         """
         Get top k spending categories.
-        C Data Structure Used: MaxHeap for categories O(n log k)
+        C Data Structure Used: IntroSort for categories O(n log n)
         """
         buffer = (CCategoryAmount * k)()
         count = self._lib.engine_get_top_categories(self._engine, k, buffer)
@@ -596,6 +671,18 @@ class CFinanceEngine:
         """
         Get data structure operation statistics.
         THIS IS THE PROOF that real C data structures are being used!
+        
+        Returns operation counts for:
+        - Red-Black Tree operations
+        - Skip List operations
+        - IntroSort operations
+        - Polynomial HashMap operations
+        - Indexed Priority Queue operations
+        - Sliding Window operations
+        - Z-Score (Welford's) operations
+        - Queue operations
+        - Stack operations
+        - Trie operations
         """
         stats = CDSAStats()
         self._lib.engine_get_dsa_stats(self._engine, byref(stats))

@@ -181,6 +181,10 @@ class DatabaseManager:
         # Record for undo
         self._push_undo(1, f"{tx['id']}|{tx['type']}|{tx['amount']}|{tx['category']}|{tx['description']}|{tx['date']}")
         
+        # IMPORTANT: Delete transaction FIRST before updating stats
+        # This ensures _remove_from_spending_stats calculates correctly without the deleted transaction
+        self.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
+        
         # Update daily spending
         self._update_daily_spending(tx['date'], tx['type'], -tx['amount'], -1)
         
@@ -188,7 +192,6 @@ class DatabaseManager:
         if tx['type'] == 'expense':
             self._remove_from_spending_stats(tx['category'], tx['amount'])
         
-        self.execute("DELETE FROM transactions WHERE id = ?", (tx_id,))
         return True
     
     # ==================== BUDGET OPERATIONS ====================

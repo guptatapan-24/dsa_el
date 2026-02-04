@@ -416,33 +416,49 @@ class DatabaseManager:
         if existing:
             income_delta = amount if tx_type == 'income' else 0
             expense_delta = amount if tx_type == 'expense' else 0
-            self.execute(
-                """UPDATE daily_spending 
-                   SET total_income = total_income + ?,
-                       total_expenses = total_expenses + ?,
-                       transaction_count = transaction_count + ?
-                   WHERE date = ?""",
-                (income_delta, expense_delta, count_delta, date)
-            )
+            
+            new_count = existing['transaction_count'] + count_delta
+            new_income = existing['total_income'] + income_delta
+            new_expense = existing['total_expenses'] + expense_delta
+            
+            # If no transactions left for this date, remove the entry
+            if new_count <= 0:
+                self.execute("DELETE FROM daily_spending WHERE date = ?", (date,))
+            else:
+                # Ensure values don't go negative
+                self.execute(
+                    """UPDATE daily_spending 
+                       SET total_income = MAX(0, total_income + ?),
+                           total_expenses = MAX(0, total_expenses + ?),
+                           transaction_count = MAX(0, transaction_count + ?)
+                       WHERE date = ?""",
+                    (income_delta, expense_delta, count_delta, date)
+                )
         else:
-            income = amount if tx_type == 'income' else 0
-            expense = amount if tx_type == 'expense' else 0
-            self.execute(
-                """INSERT INTO daily_spending (date, total_income, total_expenses, transaction_count)
-                   VALUES (?, ?, ?, ?)""",
-                (date, income, expense, max(0, count_delta))
-            )
+            # Only insert if adding (positive amount)
+            if amount > 0:
+                income = amount if tx_type == 'income' else 0
+                expense = amount if tx_type == 'expense' else 0
+                self.execute(
+                    """INSERT INTO daily_spending (date, total_income, total_expenses, transaction_count)
+                       VALUES (?, ?, ?, ?)""",
+                    (date, income, expense, max(0, count_delta))
+                )
     
     def get_spending_trend(self, days: int = 7) -> Dict:
         """Get spending trend using sliding window concept"""
         end_date = datetime.now().strftime('%Y-%m-%d')
         start_date = (datetime.now() - timedelta(days=days-1)).strftime('%Y-%m-%d')
         
-        # Get daily data
+        # Get daily data directly from transactions (more reliable than aggregates)
         daily_data = self.fetch_all(
-            """SELECT date, total_income, total_expenses, transaction_count
-               FROM daily_spending
+            """SELECT date,
+                      SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
+                      SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expenses,
+                      COUNT(*) as transaction_count
+               FROM transactions
                WHERE date BETWEEN ? AND ?
+               GROUP BY date
                ORDER BY date ASC""",
             (start_date, end_date)
         )
@@ -506,44 +522,57 @@ class DatabaseManager:
             )
     
     def _remove_from_spending_stats(self, category: str, amount: float):
-        """Remove transaction from spending stats when deleted (reverse Welford's algorithm)"""
+        """Remove transaction from spending stats when deleted - recalculates for accuracy"""
         cat_id = self.get_or_create_category(category)
+        
+        # Get all remaining expense transactions for this category
+        transactions = self.fetch_all(
+            """SELECT t.amount
+               FROM transactions t
+               WHERE t.category_id = ? AND t.type = 'expense'""",
+            (cat_id,)
+        )
+        
+        if len(transactions) == 0:
+            # No transactions left, delete stats
+            self.execute("DELETE FROM spending_stats WHERE category_id = ?", (cat_id,))
+            return
+        
+        # Recalculate stats from scratch for this category using Welford's algorithm
+        n = 0
+        mean = 0.0
+        sum_sq = 0.0
+        total_sum = 0.0
+        
+        for tx in transactions:
+            n += 1
+            total_sum += tx['amount']
+            old_mean = mean
+            mean = old_mean + (tx['amount'] - old_mean) / n
+            sum_sq = sum_sq + (tx['amount'] - old_mean) * (tx['amount'] - mean)
+        
+        std_dev = math.sqrt(sum_sq / n) if n > 0 and sum_sq > 0 else 0
+        
         existing = self.fetch_one(
             "SELECT * FROM spending_stats WHERE category_id = ?", (cat_id,)
         )
         
-        if not existing or existing['transaction_count'] <= 1:
-            # Delete stats if only one transaction was there
-            self.execute("DELETE FROM spending_stats WHERE category_id = ?", (cat_id,))
-            return
-        
-        n = existing['transaction_count'] - 1
-        old_mean = existing['mean_amount']
-        old_sum = existing['sum_amount']
-        old_sum_sq = existing['sum_squared']
-        
-        # Reverse Welford's algorithm
-        new_sum = old_sum - amount
-        new_mean = new_sum / n if n > 0 else 0
-        
-        # Reverse the sum of squared differences calculation
-        # old_sum_sq = old_sum_sq + (amount - old_prev_mean) * (amount - old_mean)
-        # We need to remove this transaction's contribution
-        # This is an approximation - recalculating from scratch would be more accurate
-        # but for practical purposes this works
-        new_sum_sq = old_sum_sq - (amount - old_mean) * (amount - new_mean)
-        new_sum_sq = max(0, new_sum_sq)  # Ensure non-negative
-        
-        std_dev = math.sqrt(new_sum_sq / n) if n > 0 and new_sum_sq > 0 else 0
-        
-        self.execute(
-            """UPDATE spending_stats 
-               SET mean_amount = ?, std_dev = ?, transaction_count = ?,
-                   sum_amount = ?, sum_squared = ?,
-                   updated_at = CURRENT_TIMESTAMP
-               WHERE category_id = ?""",
-            (new_mean, std_dev, n, new_sum, new_sum_sq, cat_id)
-        )
+        if existing:
+            self.execute(
+                """UPDATE spending_stats 
+                   SET mean_amount = ?, std_dev = ?, transaction_count = ?,
+                       sum_amount = ?, sum_squared = ?,
+                       updated_at = CURRENT_TIMESTAMP
+                   WHERE category_id = ?""",
+                (mean, std_dev, n, total_sum, sum_sq, cat_id)
+            )
+        else:
+            self.execute(
+                """INSERT INTO spending_stats 
+                   (category_id, mean_amount, std_dev, transaction_count, sum_amount, sum_squared)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (cat_id, mean, std_dev, n, total_sum, sum_sq)
+            )
     
     def recalculate_spending_stats(self):
         """Recalculate all spending stats from transactions (for data consistency)"""
@@ -561,6 +590,29 @@ class DatabaseManager:
         
         for tx in transactions:
             self._update_spending_stats(tx['category_id'], tx['amount'])
+    
+    def recalculate_daily_spending(self):
+        """Recalculate all daily spending aggregates from transactions (for data consistency)"""
+        # Clear all daily spending
+        self.execute("DELETE FROM daily_spending")
+        
+        # Recalculate from transactions grouped by date
+        daily_data = self.fetch_all(
+            """SELECT date,
+                      SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as total_income,
+                      SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as total_expenses,
+                      COUNT(*) as transaction_count
+               FROM transactions
+               GROUP BY date
+               ORDER BY date ASC"""
+        )
+        
+        for day in daily_data:
+            self.execute(
+                """INSERT INTO daily_spending (date, total_income, total_expenses, transaction_count)
+                   VALUES (?, ?, ?, ?)""",
+                (day['date'], day['total_income'], day['total_expenses'], day['transaction_count'])
+            )
     
     def detect_anomaly(self, category: str, amount: float, threshold: float = 2.0) -> Dict:
         """Detect if a transaction amount is anomalous using Z-Score"""

@@ -102,22 +102,32 @@ class DatabaseManager:
     # ==================== TRANSACTION OPERATIONS ====================
     
     def add_transaction(self, tx_type: str, amount: float, category: str, 
-                        description: str = '', date: str = None) -> Dict:
-        """Add a new transaction"""
+                        description: str = '', date: str = None) -> Tuple[Dict, Optional[Dict]]:
+        """Add a new transaction and return anomaly info"""
         tx_id = f"txn_{uuid.uuid4().hex[:12]}"
         date = date or datetime.now().strftime('%Y-%m-%d')
         cat_id = self.get_or_create_category(category)
         
+        # Detect anomaly BEFORE updating stats (for expenses)
+        anomaly_info = None
+        is_anomaly = 0
+        z_score = 0.0
+        if tx_type == 'expense':
+            anomaly_info = self._detect_anomaly_internal(cat_id, category, amount)
+            is_anomaly = 1 if anomaly_info.get('isAnomaly', False) else 0
+            z_score = anomaly_info.get('zScore', 0.0)
+        
+        # Insert transaction with anomaly info
         self.execute(
-            """INSERT INTO transactions (id, type, amount, category_id, description, date)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (tx_id, tx_type, amount, cat_id, description, date)
+            """INSERT INTO transactions (id, type, amount, category_id, description, date, is_anomaly, z_score)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (tx_id, tx_type, amount, cat_id, description, date, is_anomaly, z_score)
         )
         
         # Update daily spending aggregates
         self._update_daily_spending(date, tx_type, amount, 1)
         
-        # Update spending stats for anomaly detection
+        # Update spending stats for anomaly detection AFTER checking for anomaly
         if tx_type == 'expense':
             self._update_spending_stats(cat_id, amount)
         
@@ -127,7 +137,7 @@ class DatabaseManager:
         return {
             'id': tx_id, 'type': tx_type, 'amount': amount,
             'category': category, 'description': description, 'date': date
-        }
+        }, anomaly_info
     
     def get_transaction_by_id(self, tx_id: str) -> Optional[Dict]:
         """Get transaction by ID (Skip List simulation via indexed lookup)"""

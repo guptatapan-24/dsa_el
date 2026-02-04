@@ -504,22 +504,27 @@ class CFinanceEngine:
         Get category suggestions by prefix.
         C Data Structure Used: Trie prefix search O(m + k)
         """
-        # Allocate buffer of char pointers
-        buffer = (ctypes.c_char_p * max_count)()
-        for i in range(max_count):
-            buffer[i] = ctypes.create_string_buffer(256)
+        # Create buffer of string buffers
+        StringBuffer = ctypes.c_char * 256
+        buffers = [StringBuffer() for _ in range(max_count)]
+        buffer_ptrs = (ctypes.c_char_p * max_count)(*[ctypes.cast(b, ctypes.c_char_p) for b in buffers])
         
         count = self._lib.engine_get_category_suggestions(
             self._engine,
             self._encode(prefix),
-            buffer,
+            buffer_ptrs,
             max_count
         )
         
         results = []
         for i in range(count):
-            if buffer[i]:
-                results.append(buffer[i].decode('utf-8', errors='replace'))
+            if buffer_ptrs[i]:
+                try:
+                    s = buffer_ptrs[i].decode('utf-8', errors='replace')
+                    if s:
+                        results.append(s)
+                except:
+                    pass
         return results
     
     def get_all_categories(self) -> List[str]:
@@ -528,16 +533,22 @@ class CFinanceEngine:
         C Data Structure Used: Trie traversal O(n)
         """
         max_count = 200
-        buffer = (ctypes.c_char_p * max_count)()
-        for i in range(max_count):
-            buffer[i] = ctypes.create_string_buffer(256)
+        # Create buffer of string buffers
+        StringBuffer = ctypes.c_char * 256
+        buffers = [StringBuffer() for _ in range(max_count)]
+        buffer_ptrs = (ctypes.c_char_p * max_count)(*[ctypes.cast(b, ctypes.c_char_p) for b in buffers])
         
-        count = self._lib.engine_get_all_categories(self._engine, buffer, max_count)
+        count = self._lib.engine_get_all_categories(self._engine, buffer_ptrs, max_count)
         
         results = []
         for i in range(count):
-            if buffer[i]:
-                results.append(buffer[i].decode('utf-8', errors='replace'))
+            if buffer_ptrs[i]:
+                try:
+                    s = buffer_ptrs[i].decode('utf-8', errors='replace')
+                    if s:
+                        results.append(s)
+                except:
+                    pass
         return results
     
     # ==================== UNDO ====================

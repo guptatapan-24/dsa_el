@@ -39,7 +39,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        os.environ.get("FRONTEND_URL", "https://endpoint-doctor-1.preview.emergentagent.com")
+        os.environ.get("FRONTEND_URL", "https://anomaly-checker.preview.emergentagent.com")
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -498,6 +498,22 @@ async def check_anomaly(category: str, amount: float, threshold: float = 2.0):
     return {
         "result": result,
         "dsInfo": "Real-time anomaly detection using Z-Score"
+    }
+
+@api_router.post("/anomalies/recalculate", response_model=dict)
+async def recalculate_spending_stats():
+    """
+    Recalculate all spending statistics from transactions.
+    Use this to fix data consistency issues.
+    
+    Data Structure: Rebuilds Z-Score statistics from scratch
+    """
+    db = get_db()
+    db.recalculate_spending_stats()
+    return {
+        "status": "success",
+        "message": "Spending statistics recalculated from all transactions",
+        "dsInfo": "All category statistics rebuilt using Welford's algorithm"
     }
 
 

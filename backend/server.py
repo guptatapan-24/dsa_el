@@ -39,7 +39,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        os.environ.get("FRONTEND_URL", "https://fix-analytics-bug.preview.emergentagent.com")
+        os.environ.get("FRONTEND_URL", "https://data-insights-265.preview.emergentagent.com")
     ],
     allow_credentials=True,
     allow_methods=["*"],

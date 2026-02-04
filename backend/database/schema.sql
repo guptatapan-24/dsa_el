@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     category_id TEXT NOT NULL,
     description TEXT DEFAULT '',
     date TEXT NOT NULL,  -- YYYY-MM-DD format for string comparison
+    is_anomaly INTEGER DEFAULT 0,  -- Flag for anomaly at creation time
+    z_score REAL DEFAULT 0,  -- Z-score at creation time
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (category_id) REFERENCES categories(id)
 );

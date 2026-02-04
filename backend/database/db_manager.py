@@ -481,13 +481,43 @@ class DatabaseManager:
         total_income = sum(d['total_income'] for d in daily_data)
         avg_daily_expense = total_expenses / days if days > 0 else 0
         
-        # Calculate trend (positive = increasing spending)
+        # Calculate trend using improved algorithm
+        trend = 'stable'
+        trend_percent = 0.0
+        
         if len(daily_data) >= 2:
-            first_half = sum(d['total_expenses'] for d in daily_data[:len(daily_data)//2])
-            second_half = sum(d['total_expenses'] for d in daily_data[len(daily_data)//2:])
-            trend = 'increasing' if second_half > first_half * 1.1 else 'decreasing' if second_half < first_half * 0.9 else 'stable'
-        else:
-            trend = 'stable'
+            # Split data into two halves
+            mid = len(daily_data) // 2
+            # Ensure we have at least 1 day in each half for odd counts
+            if len(daily_data) % 2 == 1:
+                mid += 1
+            
+            first_half = sum(d['total_expenses'] for d in daily_data[:mid])
+            second_half = sum(d['total_expenses'] for d in daily_data[mid:])
+            
+            # Calculate days in each half for proper comparison
+            first_half_days = mid
+            second_half_days = len(daily_data) - mid
+            
+            # Normalize by days to get average per day in each half
+            first_avg = first_half / first_half_days if first_half_days > 0 else 0
+            second_avg = second_half / second_half_days if second_half_days > 0 else 0
+            
+            # Calculate percentage change
+            if first_avg > 0:
+                trend_percent = ((second_avg - first_avg) / first_avg) * 100
+            elif second_avg > 0:
+                # First half had no spending, second half has spending = increasing
+                trend_percent = 100
+            # else both are 0, trend stays stable with 0%
+            
+            # Determine trend based on percentage change (10% threshold)
+            if trend_percent > 10:
+                trend = 'increasing'
+            elif trend_percent < -10:
+                trend = 'decreasing'
+            else:
+                trend = 'stable'
         
         return {
             'period': f'{days}-day',
@@ -497,6 +527,7 @@ class DatabaseManager:
             'totalIncome': round(total_income, 2),
             'avgDailyExpense': round(avg_daily_expense, 2),
             'trend': trend,
+            'trendPercent': round(trend_percent, 1),
             'dailyData': daily_data
         }
     

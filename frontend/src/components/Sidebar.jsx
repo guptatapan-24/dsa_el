@@ -24,7 +24,7 @@ const navItems = [
   { path: "/budgets", icon: Wallet, label: "Budgets" },
   { path: "/bills", icon: CalendarClock, label: "Bills" },
   { path: "/analytics", icon: BarChart3, label: "Analytics" },
-  { path: "/dsa-info", icon: BookOpen, label: "DSA Reference" },
+  // { path: "/dsa-info", icon: BookOpen, label: "DSA Reference" },
 ];
 
 export default function Sidebar() {

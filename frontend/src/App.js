@@ -9,7 +9,7 @@ import AddTransaction from "@/pages/AddTransaction";
 import Budgets from "@/pages/Budgets";
 import Bills from "@/pages/Bills";
 import Analytics from "@/pages/Analytics";
-import DSAInfo from "@/pages/DSAInfo";
+// import DSAInfo from "@/pages/DSAInfo";
 
 // Layout
 import Sidebar from "@/components/Sidebar";
@@ -29,7 +29,7 @@ function App() {
               <Route path="/budgets" element={<Budgets />} />
               <Route path="/bills" element={<Bills />} />
               <Route path="/analytics" element={<Analytics />} />
-              <Route path="/dsa-info" element={<DSAInfo />} />
+              {/* <Route path="/dsa-info" element={<DSAInfo />} /> */}
             </Routes>
           </main>
         </div>
